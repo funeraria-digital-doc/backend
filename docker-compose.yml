@@ -1,0 +1,22 @@
+version: '3'
+services:
+  db:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=AzureDiamond
+      - MONGO_INITDB_ROOT_PASSWORD=hunter2
+    ports:
+      - 27017:27017
+    container_name: mongodb
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_USERNAME=AzureDiamond
+      - MONGO_PASSWORD=hunter2
+    depends_on:
+      - db
