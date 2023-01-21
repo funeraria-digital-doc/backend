@@ -1,0 +1,30 @@
+version: '3'
+services:
+  db:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=Rafa&Alves
+      - MONGO_INITDB_ROOT_PASSWORD=Alves&Rafa
+    ports:
+      - 27017:27017
+    container_name: mongodb
+  web:
+    build: .
+    command: python funeraria/manage.py runserver 0.0.0.0:9000
+    volumes:
+      - .:/code
+    ports:
+      - "9000:9000"
+    environment:
+      - MONGO_USERNAME=AzureDiamond
+      - MONGO_PASSWORD=hunter2
+    depends_on:
+      - db
+      - migration
+  migration:
+    build: .
+    command: python manage.py migrate
+    volumes:
+      - .:/code
+    depends_on:
+      - db
