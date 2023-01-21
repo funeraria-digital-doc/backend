@@ -16,14 +16,14 @@ services:
     ports:
       - "9000:9000"
     environment:
-      - MONGO_USERNAME=AzureDiamond
-      - MONGO_PASSWORD=hunter2
+      - MONGO_USERNAME=Rafa&Alves
+      - MONGO_PASSWORD=Alves&Rafa
     depends_on:
       - db
       - migration
   migration:
     build: .
-    command: python manage.py migrate
+    command: python funeraria/manage.py makemigrations && python funeraria/manage.py migrate
     volumes:
       - .:/code
     depends_on:
