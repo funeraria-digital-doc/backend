@@ -1,0 +1,28 @@
+version: '3'
+services:
+  db:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=Rafa&Alves
+      - MONGO_INITDB_ROOT_PASSWORD=Alves&Rafa
+    ports:
+      - 27017:27017
+    container_name: mongodb
+  web:
+    build: .
+    command: ./start_project.sh
+    volumes:
+      - .:/code
+    ports:
+      - "9000:9000"
+    environment:
+      - MONGO_USERNAME=Rafa&Alves
+      - MONGO_PASSWORD=Alves&Rafa
+      - DJANGO_DB_NAME=funeraria
+      - DJANGO_SUPERUSER_USERNAME=super
+      - DJANGO_SUPERUSER_EMAIL=super@admin.pt
+      - DJANGO_SUPERUSER_PASSWORD=mypass
+      - MONGO_HOST=mongodb://db:27017/
+      - MONGO_PORT=27017
+    depends_on:
+      - db
