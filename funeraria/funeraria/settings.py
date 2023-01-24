@@ -11,7 +11,8 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -37,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',
+    'funeraria'
 ]
 
 MIDDLEWARE = [
@@ -72,11 +75,16 @@ WSGI_APPLICATION = 'funeraria.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'djongo',
+        'NAME': config('DJANGO_DB_NAME'),
+        'CLIENT': {
+            'host': config('MONGO_HOST'),
+            'port': 27017,
+            'username' : config('MONGO_USERNAME'),
+            'password' : config('MONGO_PASSWORD')
+        }  
     }
 }
 
