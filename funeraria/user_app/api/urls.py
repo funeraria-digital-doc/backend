@@ -7,8 +7,8 @@ from user_app.api.views import registration_view, logout_view
 
 
 urlpatterns = [
-    path('/', include('rest_auth.urls')),
-    path('/registration/', include('rest_auth.registration.urls')),
+    path('', include('rest_auth.urls')),
+    path('registration/', include('rest_auth.registration.urls')),
     #path('register/', registration_view, name='register'),
     # path('login/', obtain_auth_token, name='login'),
     # path('logout/', logout_view, name='logout'),
