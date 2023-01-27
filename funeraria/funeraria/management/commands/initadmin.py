@@ -10,11 +10,6 @@ class Command(BaseCommand):
         username = config('DJANGO_SUPERUSER_USERNAME')
         email = config('DJANGO_SUPERUSER_EMAIL')
         password = config('DJANGO_SUPERUSER_PASSWORD')
-        print('-----------------------------432-----------------------------------')
-        print(config('DJANGO_SUPERUSER_USERNAME'))
-        print(config('DJANGO_SUPERUSER_EMAIL'))
-        print(config('DJANGO_SUPERUSER_PASSWORD'))
-        print('----------------------------------------------------------------')
         if not User.objects.filter(username=username).exists():
             print('Creating account for %s (%s)' % (username, email))
             admin = User.objects.create_superuser(

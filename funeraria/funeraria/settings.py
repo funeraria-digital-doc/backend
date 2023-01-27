@@ -13,8 +13,14 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 from pathlib import Path
 import os
 from decouple import config
+from djongo.operations import DatabaseOperations
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+DatabaseOperations.conditional_expression_supported_in_where_clause = (
+    lambda *args, **kwargs: False
+)
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,7 +33,7 @@ SECRET_KEY = '***REMOVED-DJANGO-SECRET-KEY***'
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 # Application definition
 
@@ -38,9 +44,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core',
-    'funeraria'
+    'rest_framework_simplejwt',
+    'funeraria',
+    'user_app',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_auth',
+    'rest_auth.registration',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
 ]
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -79,6 +94,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'djongo',
         'NAME': config('DJANGO_DB_NAME'),
+        'ENFORCE_SCHEMA': True,
         'CLIENT': {
             'host': config('MONGO_HOST'),
             'port': 27017,
@@ -131,3 +147,39 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+REST_USE_JWT = True
+REST_FRAMEWORK = {
+
+    # 'DEFAULT_PERMISSION_CLASSES': [
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # 'rest_framework.authentication.BasicAuthentication',
+        #'rest_framework.authentication.TokenAuthentication',
+        #'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        #'rest_framework.authentication.SessionAuthentication',
+        #'rest_framework.authentication.BasicAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+
+    # 'DEFAULT_THROTTLE_CLASSES': [
+    #     'rest_framework.throttling.AnonRateThrottle',
+    #     'rest_framework.throttling.UserRateThrottle'
+    # ],
+
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '100/day',
+        'review-create': '2/day',
+        'review-list': '100/day',
+        'review-detail': '100/day',
+    },
+
+    # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    # 'PAGE_SIZE': 5,
+
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+}
