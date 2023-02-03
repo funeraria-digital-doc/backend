@@ -15,17 +15,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView
-)
 from rest_framework_swagger.views import get_swagger_view
+from rest_framework.authtoken.views import obtain_auth_token
 
 schema_view = get_swagger_view(title='Test API')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/account/', include('user_app.api.urls')),
+    #path('auth/', include('rest_authtoken.urls')),
+    path('accounts/', include('accounts.urls')),
+    #path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('swagger/', schema_view)
 ]

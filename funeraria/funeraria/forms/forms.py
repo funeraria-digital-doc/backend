@@ -1,4 +1,4 @@
-from allauth.account.forms import LoginForm
+from allauth.accounts.forms import LoginForm
 class MyCustomLoginForm(LoginForm):
      def __init__(self, *args, **kwargs):
         super(MyCustomLoginForm, self).__init__(*args, **kwargs)

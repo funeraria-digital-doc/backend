@@ -1,13 +1,12 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 
-
+from accounts.models import User
 class RegistrationSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(style={'input_type': 'password'}, write_only=True)
-
+    password_confirm = serializers.CharField(style={'input_type': 'password'}, write_only=True)
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'confirm_password']
+        fields = ['username', 'email' ,'password', 'password_confirm']
         extra_kwargs = {
             'password' : {'write_only': True}
         }
@@ -15,28 +14,24 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def save(self):
 
         password = self.validated_data['password']
-        confirm_password = self.validated_data['confirm_password']
+        password_confirm = self.validated_data['password_confirm']
 
-        if password != confirm_password:
-            raise serializers.ValidationError({'error': 'Both passwords should be same!'})
+        if password != password_confirm:
+            raise serializers.ValidationError({'error': 'P1 and P2 should be same!'})
 
         if User.objects.filter(email=self.validated_data['email']).exists():
             raise serializers.ValidationError({'error': 'Email already exists!'})
 
         account = User(email=self.validated_data['email'], username=self.validated_data['username'])
         account.set_password(password)
-        try:
-            account.save()
-            
-        except Exception:
-            print('Error saving account')
-        
+        account.save()
 
         return account
 
-
-# User serializer
-class UserSerializer(serializers.ModelSerializer):
+class LoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ['username','password']
+        extra_kwargs = {
+            'password' : {'write_only': True}
+        }

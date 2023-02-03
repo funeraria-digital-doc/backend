@@ -44,17 +44,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework_simplejwt',
-    'funeraria',
-    'user_app',
+    'rest_framework_swagger',
+    
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_auth',
-    'rest_auth.registration',
-    'django.contrib.sites',
-    'allauth',
-    'allauth.account',
-    'rest_framework_swagger'
+    #'rest_authtoken',
+    'funeraria',
+    'accounts',
+    
+    
 ]
 SITE_ID = 1
 
@@ -146,29 +144,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+#STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # Default primary key field type
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-REST_USE_JWT = True
-AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-
-    # `allauth` specific authentication methods, such as login by e-mail
-    "allauth.account.auth_backends.AuthenticationBackend",
-    'user_app.authentication.EmailAuthBackend'
-]
+# REST_USE_JWT = True
+AUTH_USER_MODEL = 'accounts.User'
+REGISTRATION_EMAIL_CONFIRM = False
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema' ,
 
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
-
+    # 'DEFAULT_AUTHENTICATION_CLASSES': (
+    #     'accounts.authentication.BearerAuthentication',
+    # ),
+    # 'DEFAULT_AUTHENTICATION_CLASSES': [
+    #     'rest_authtoken.auth.AuthTokenAuthentication',
+    # ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
 
     # 'DEFAULT_THROTTLE_CLASSES': [
