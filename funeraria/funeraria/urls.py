@@ -22,8 +22,8 @@ schema_view = get_swagger_view(title='Test API')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    #path('auth/', include('rest_authtoken.urls')),
     path('accounts/', include('accounts.urls')),
-    #path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
+    path('template-logic/', include('template_logic.urls')),
+    path('groups/', include('groups.urls')),
     path('swagger/', schema_view)
 ]

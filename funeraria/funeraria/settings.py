@@ -48,11 +48,10 @@ INSTALLED_APPS = [
     
     'rest_framework',
     'rest_framework.authtoken',
-    #'rest_authtoken',
     'funeraria',
     'accounts',
-    
-    
+    'template_logic',
+    'groups'
 ]
 SITE_ID = 1
 

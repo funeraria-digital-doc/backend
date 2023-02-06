@@ -28,10 +28,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
         return account
 
-class LoginSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username','password']
+        fields = ['username','email']
         extra_kwargs = {
             'password' : {'write_only': True}
         }
