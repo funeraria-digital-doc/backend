@@ -63,22 +63,34 @@ def edit_variables(request, *args, **kwargs):
     if len(doc_variables['vars']) ==  0:
         return Response({"error" : "No variables found"}, status = status.HTTP_404_NOT_FOUND)
     not_found_keys = []
-    edited_keys = []
+    edited_keys_array = []
+    edited_keys = {}
+    char_remov = ["-"," "]
     for key_var,var_key_text in enumerate(request.data):
         if  var_key_text in doc_variables['vars']:
-            print(doc_variables['doc'].paragraphs)
+            print(var_key_text)
+
             for key , paragraph in enumerate(doc_variables['doc'].paragraphs):
-                if '{{ ' + var_key_text + ' }}' in paragraph.text:
-                    doc_variables['doc'].paragraphs[key].text = paragraph.text.replace('{{ ' + var_key_text + ' }}', '{{ ' + request.data[var_key_text] + ' }}' )
-                    print(paragraph.text)
-                    edited_keys.append(var_key_text)
+                if '{{ ' + var_key_text + ' }}' in paragraph.text or '{{' + var_key_text + '}}' in paragraph.text:
+                    # doc_variables['doc'].paragraphs[key].text = paragraph.text.replace('{{ ' + var_key_text + ' }}', '{{ ' + request.data[var_key_text] + ' }}' )
+                    # print(paragraph.text)
+                    edited_value = request.data[var_key_text]
+                    for char in char_remov:
+                        # replace() "returns" an altered string
+                        edited_value = edited_value.replace(char, "_")
+                    edited_keys[var_key_text] = '{{ ' + edited_value + ' }}'
+                    edited_keys_array.append(var_key_text)
         else : 
+            #edited_keys[var_key_text] = '{{ ' + var_key_text + ' }}'
             not_found_keys.append(var_key_text)
     
     if len(edited_keys) > 0 :
         print(template['file'])
+        print(edited_keys)
+        doc_variables['doc'].render(context=edited_keys)
         doc_variables['doc'].save('media/' + template['file'])
-    return Response({'not_found_keys' : not_found_keys, 'edited_keys' : edited_keys}, status=status.HTTP_200_OK)
+        #doc_variables['doc'].save('media/' + template['file'])
+    return Response({'not_found_keys' : not_found_keys, 'edited_keys' : edited_keys_array}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def download(request):
