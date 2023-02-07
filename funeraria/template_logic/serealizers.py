@@ -1,14 +1,16 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 from template_logic.models import TemplateLogic
-
 
 class UploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = TemplateLogic
-        fields = ['title','file']
+        fields = ['title','file','group','slug']
         validators = [
-            
+            serializers.UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=('title', 'group'),
+                message= "Template title as to be unique in group"
+            )
         ]
 
     

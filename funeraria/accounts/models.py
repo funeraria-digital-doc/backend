@@ -16,4 +16,6 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 
 class User(AbstractUser):
     group_user = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
+    def __str__(self):
+        return self.username
     

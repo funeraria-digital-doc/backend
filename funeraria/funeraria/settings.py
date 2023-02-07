@@ -151,6 +151,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # REST_USE_JWT = True
 AUTH_USER_MODEL = 'accounts.User'
 REGISTRATION_EMAIL_CONFIRM = False
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema' ,
 
