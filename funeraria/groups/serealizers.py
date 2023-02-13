@@ -27,12 +27,6 @@ class GroupCreateSerializer(serializers.ModelSerializer):
                 ]
             }
         }
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Group.objects.all(),
-                fields=['name']
-            )
-        ]
 
 
 class GroupUpdateSerializer(serializers.ModelSerializer):
@@ -50,12 +44,6 @@ class GroupUpdateSerializer(serializers.ModelSerializer):
                 ]
             }
         }
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Group.objects.all(),
-                fields=['name']
-            )
-        ]
        
     
     

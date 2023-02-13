@@ -3,23 +3,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
-from rest_framework.parsers import JSONParser
 from groups.models import Group
 
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
+from rest_framework.decorators import parser_classes
 
+@swagger_auto_schema(
+    method='post',
+    request_body=GroupCreateSerializer,
+    operation_description="Create a new Group"
+)    
 @api_view(['POST'])
 def create(request, *args, **kwargs):
-    """
-    This text is the description for this API.
-
-    ---
-    parameters:
-    - name: group name
-      description: Group name
-      required: true
-      type: string
-      paramType: body
-    """
     data = JSONParser().parse(request)
     serializer = GroupCreateSerializer(data=data)
     #serializer = GroupCreateSerializer(data=request.data)
@@ -40,6 +37,10 @@ def create(request, *args, **kwargs):
         #raise serializer.errors
     return Response({'message' : group}, status = status.HTTP_200_OK)
 
+@swagger_auto_schema(
+    method='get',
+    operation_description="View details of a group"
+) 
 @api_view(['GET'])
 def view(request, *args, **kwargs):
     group = Group.objects.filter(pk=kwargs.get('pk')).values().first()
@@ -47,10 +48,15 @@ def view(request, *args, **kwargs):
         return Response({"error" : "Group does not exist!"}, status = status.HTTP_200_OK)
     return Response(group, status = status.HTTP_404_NOT_FOUND)
 
+@swagger_auto_schema(
+    method='post',
+    request_body=GroupUpdateSerializer,
+    operation_description="Update a Group"
+)    
 @api_view(['POST'])
 def update(request, *args, **kwargs):
     group = Group.objects.filter(pk=kwargs.get('pk')).first()  
-    serializer = GroupUpdateSerializer(data = request.data,instance=group)   
+    serializer = GroupUpdateSerializer(data = request.data,instance=group, partial=True)   
     if serializer.is_valid():
         if group is None:
                 return Response({"error" : "Group does not exist!"}, status = status.HTTP_404_NOT_FOUND)
@@ -61,7 +67,11 @@ def update(request, *args, **kwargs):
             return Response({'error' : "something went wrong updating group","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
         return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
-   
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete a group"
+) 
 @api_view(['DELETE'])
 def remove(request, *args, **kwargs):
     group = Group.objects.filter(id=kwargs.get('pk')).first()
@@ -70,6 +80,10 @@ def remove(request, *args, **kwargs):
     group.delete()
     return Response({"success" : "Group deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
 
+@swagger_auto_schema(
+    method='get',
+    operation_description="List all groups"
+) 
 @api_view(['GET'])
 def list(request, *args, **kwargs):
     groups = Group.objects.all().values()

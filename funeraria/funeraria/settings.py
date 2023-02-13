@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'funeraria',
     'accounts',
     'template_logic',
-    'groups'
+    'groups',
+    'drf_yasg'
 ]
 SITE_ID = 1
 
@@ -167,6 +168,7 @@ REST_FRAMEWORK = {
     # ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        #'rest_framework.authentication.SessionAuthentication'
     ],
 
     # 'DEFAULT_THROTTLE_CLASSES': [
@@ -188,4 +190,22 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
+    ],
 }
+
+SWAGGER_SETTINGS = {
+    'SHOW_REQUEST_HEADERS': True,
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'placeholder' : 'Token xxx'
+        }
+    }
+}
+
