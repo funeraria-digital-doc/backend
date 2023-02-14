@@ -1,3 +1,6 @@
 from django.contrib import admin
+from template_logic.models import TemplateLogic
 
-# Register your models here.
+@admin.register(TemplateLogic)
+class TemplateLogicAdmin(admin.ModelAdmin):
+    list_display = ['title', 'slug', 'file', 'group']

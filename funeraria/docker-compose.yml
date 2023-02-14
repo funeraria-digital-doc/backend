@@ -10,10 +10,10 @@ services:
     container_name: mongodb
   web:
     build: .
-    volumes:
-      - .:/code
-    #command: ./start_project.sh
-    command: python manage.py runserver 0.0.0.0:9000
+    # volumes:
+    #   - .:/code
+    command: /bin/sh "./start_project.sh"
+    #command: python manage.py runserver 0.0.0.0:9000
     ports:
       - "9000:9000"
     environment:
