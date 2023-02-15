@@ -123,7 +123,13 @@ def edit_profile(request, *args, **kwargs):
                 serializer.update(instance = user, validated_data=serializer.validated_data)
                 return Response(serializer.data, status = status.HTTP_200_OK)
             except:
-                return Response({'error' : "something went wrong updating user","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+                return Response(
+                    {
+                        'error' : "something went wrong updating user",
+                        "data" : serializer.errors
+                    }, 
+                    status = status.HTTP_404_NOT_FOUND
+                )
         else:
             return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
     return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
@@ -140,7 +146,11 @@ def create_superuser(request, *args, **kwargs):
     serializer = RegistrationSerializer(data=request.data)
     data = {}
     if serializer.is_valid():
-        user = User.objects.create_superuser(serializer.validated_data['username'], serializer.validated_data['email'], serializer.validated_data['password'])
+        user = User.objects.create_superuser(
+            serializer.validated_data['username'], 
+            serializer.validated_data['email'], 
+            serializer.validated_data['password']
+        )
         
         data['response'] = "Registration Successful!"
         data['username'] = user.username
