@@ -3,7 +3,9 @@ foto
 nome
 sexo
 estado civil
-nome_conjuge
+bi/cc
+nif
+niss
 data_nascimento
 idade
 morada
@@ -38,15 +40,13 @@ ramo_atividade (Se respondeu Empregado, ou Desempregado - à procura de novo emp
 --conjuge
 sexo
 idade
-
+nome
 
 --naturalidade
 freguesia
 concelho
 filiacao (1 e 2) (dentro do casamento/fora do casamento com/sem coabitação dos pais/ ignorado)
-bi/cc
-nif
-niss
+
 
 
 --falecimento
@@ -85,7 +85,7 @@ nome
 cc/bi
 cc_valido_ate
 parentesco
-sucessores_ou_donatarios
+//sucessores_ou_donatarios
 
 
 
