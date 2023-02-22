@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'accounts',
     'template_logic',
     'groups',
+    'records',
     'drf_yasg'
 ]
 SITE_ID = 1
