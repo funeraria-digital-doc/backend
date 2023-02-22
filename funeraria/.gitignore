@@ -3,3 +3,4 @@ web-variables.env
 mongo-variables.env
 bd_fields.txt
 notas.txt
+.env
