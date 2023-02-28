@@ -36,5 +36,6 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('template-logic/', include('template_logic.urls')),
     path('groups/', include('groups.urls')),
+    path('records/', include('records.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui')
 ]

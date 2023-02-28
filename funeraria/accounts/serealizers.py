@@ -50,6 +50,13 @@ class EditProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email']
+
+class EditProfileAdminSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
+    class Meta:
+        model = User
+        fields = '__all__'
         
     
     

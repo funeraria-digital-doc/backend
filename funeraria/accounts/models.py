@@ -15,7 +15,13 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 
 
 class User(AbstractUser):
+    class Status(models.TextChoices):
+        INACTIVE = "1", "Inactive"
+        ACTIVE = "2", "Active"
+        SUSPENDED = "3", "Suspended"
+
     group_user = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
+    status = models.CharField(max_length=64, choices=Status.choices, blank=True,default=Status.ACTIVE) 
     def __str__(self):
         return self.username
     

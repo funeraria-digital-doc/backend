@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 
-from accounts.serealizers import RegistrationSerializer,EditProfileSerializer
+from accounts.serealizers import RegistrationSerializer,EditProfileSerializer, EditProfileAdminSerializer
 from accounts.models import User
 from rest_framework.authtoken.models import Token
 
@@ -208,7 +208,7 @@ def profile_admin(request, *args, **kwargs):
 
 @swagger_auto_schema(
     method='patch',
-    request_body=EditProfileSerializer,
+    request_body=EditProfileAdminSerializer,
     operation_description="Edit a User profile"
 )    
 @api_view(['PATCH'])
@@ -217,7 +217,7 @@ def profile_admin(request, *args, **kwargs):
 def edit_profile_admin(request, *args, **kwargs):
     user = User.objects.filter(id=kwargs['pk']).first()
     if user is not None:
-        serializer = EditProfileSerializer(data = request.data, partial=True)   
+        serializer = EditProfileAdminSerializer(data = request.data, partial=True)   
         if serializer.is_valid():
             try:            
                 serializer.update(instance = user, validated_data=serializer.validated_data)
@@ -239,5 +239,30 @@ def remove(request, *args, **kwargs):
     if user is None:
         return Response({"error" : "User does not exist!"},status=status.HTTP_404_NOT_FOUND)
     user.delete()
-    return Response({"success" : "User deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)    
+    return Response({"success" : "User deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)   
+
+
+@swagger_auto_schema(       
+    method='get',
+    operation_description="List all active users"
+)
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def list_active_users(request): 
+    users = User.objects.filter(status=User.Status.ACTIVE).values()
+    if users is None:
+        return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
+    return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   
+
+@swagger_auto_schema(       
+    method='get',
+    operation_description="List all users"
+)
+@api_view(['GET'])
+@permission_classes([IsAdmin])
+def list_all_users(request): 
+    users = User.objects.all()
+    if users is None:
+        return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
+    return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   
     

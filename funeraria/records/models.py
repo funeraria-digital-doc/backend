@@ -1,13 +1,14 @@
 from django.db import models
 from accounts.models import User
-
 from groups.models import Group
-
 
 def get_upload_path(instance, filename):
     if instance.name is not None:
-        return instance.name + '/' + filename
+        return "" + instance.name + '/' + filename
     return '/' + filename
+
+
+    
 
 class Record(models.Model):
     class Gender(models.TextChoices):
@@ -21,8 +22,24 @@ class Record(models.Model):
         DIVORCED = "3", "Divorced"
         WIDOWER = "4", "Widower"
 
-    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    class Status(models.TextChoices):
+        INACTIVE = "1", "Inactive"
+        ACTIVE = "2", "Active"
+        PENDING = "3", "Pending"
+        COMPLETED = "4", "Completed"
+        ARCHIVED = "5", "Archived"
+
+    group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, related_name = "record_group")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name = "record_created_by")
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name = "record_updated_by")
+
+    phone = models.CharField(max_length=32, db_column='phone') 
+    email = models.EmailField(max_length=32, db_column='email', null=True) 
+    status = models.CharField(max_length=64, choices=Status.choices,  db_column='status', null=True)  
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+    
+
 
     photo = models.FileField(upload_to=get_upload_path, null=True)
     name = models.CharField(max_length=255,unique=True, db_column='name') 
@@ -40,8 +57,8 @@ class Record(models.Model):
     father_name = models.CharField(max_length=255, db_column='father_name', null=True) 
     last_mariage_date = models.DateField(db_column='last_mariage_date', null=True)
 
-    spouse_name = models.CharField(max_length=255,unique=True, db_column='spouse_name')
-    spouse_gender = models.CharField(max_length=64, choices=Gender.choices, db_column='spouse_gender')
+    spouse_name = models.CharField(max_length=255,null=True, db_column='spouse_name')
+    spouse_gender = models.CharField(max_length=64, choices=Gender.choices, db_column='spouse_gender',null=True)
     spouse_age = models.IntegerField(db_column='spouse_age', null=True)
 
     naturality_parish = models.CharField(max_length=255, db_column='naturality_parish', null=True) 
@@ -73,7 +90,7 @@ class Record(models.Model):
     wake_time = models.TimeField(db_column='wake_time', null=True)
     leaving_mortuary_datetime = models.DateTimeField(db_column='leaving_mortuary_time', null=True)
     funeral_datetime = models.DateTimeField(db_column='funeral_datetime', null=True)
-    funeral_local = models.TimeField(db_column='funeral_local', null=True)
+    funeral_local = models.CharField(max_length=255, db_column='funeral_local', null=True)
 
     family_member_name = models.CharField(max_length=255, db_column='family_member_name', null=True) 
     family_member_cc = models.CharField(max_length=16, db_column='family_member_cc', null=True)
@@ -81,8 +98,10 @@ class Record(models.Model):
     family_member_kinship = models.CharField(max_length=64, db_column='family_member_kinship', null=True) 
 
     death_declaration_number = models.CharField(max_length=32, db_column='death_declaration_number', null=True) 
+
     
 
 
     def __str__(self):
         return self.name
+    
