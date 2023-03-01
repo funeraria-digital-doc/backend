@@ -1,11 +1,8 @@
 from django.db import models
 from accounts.models import User
-from funeraria.middleware.current_user import CurrentUserMiddleware
 from groups.models import Group
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-
-# from records.serealizers import RecordCreateSerializer
 
 
 
@@ -38,7 +35,7 @@ class Record(models.Model):
         ARCHIVED = "Archived"
 
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, related_name = "record_group")
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=False, related_name='created_by', editable=False, default=CurrentUserMiddleware.get_current_user)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=False, related_name='created_by', editable=False)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name = "record_updated_by")
 
     phone = models.CharField(max_length=32, db_column='phone') 
