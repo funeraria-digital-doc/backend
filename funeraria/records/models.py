@@ -1,10 +1,18 @@
 from django.db import models
 from accounts.models import User
+from funeraria.middleware.current_user import CurrentUserMiddleware
 from groups.models import Group
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
+
+# from records.serealizers import RecordCreateSerializer
+
+
+
 
 def get_upload_path(instance, filename):
     if instance.name is not None:
-        return "" + instance.name + '/' + filename
+        return "records/" + instance.name + '/' + filename
     return '/' + filename
 
 
@@ -12,30 +20,30 @@ def get_upload_path(instance, filename):
 
 class Record(models.Model):
     class Gender(models.TextChoices):
-        MAN = "1", "Male"
-        WOMAN = "2", "Female"
-        OTHER = "3", "Other"
+        MAN = "Male"
+        WOMAN = "Female"
+        OTHER = "Other"
 
     class MaritalStatus(models.TextChoices):
-        SINGLE = "1", "Single"
-        MARIED = "2", "Maried"
-        DIVORCED = "3", "Divorced"
-        WIDOWER = "4", "Widower"
+        SINGLE = "Single"
+        MARIED = "Maried"
+        DIVORCED = "Divorced"
+        WIDOWER = "Widower"
 
     class Status(models.TextChoices):
-        INACTIVE = "1", "Inactive"
-        ACTIVE = "2", "Active"
-        PENDING = "3", "Pending"
-        COMPLETED = "4", "Completed"
-        ARCHIVED = "5", "Archived"
+        INACTIVE = "Inactive"
+        ACTIVE = "Active"
+        PENDING = "Pending"
+        COMPLETED = "Completed"
+        ARCHIVED = "Archived"
 
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, related_name = "record_group")
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name = "record_created_by")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=False, related_name='created_by', editable=False, default=CurrentUserMiddleware.get_current_user)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name = "record_updated_by")
 
     phone = models.CharField(max_length=32, db_column='phone') 
     email = models.EmailField(max_length=32, db_column='email', null=True) 
-    status = models.CharField(max_length=64, choices=Status.choices,  db_column='status', null=True)  
+    status = models.CharField(max_length=64, choices=Status.choices,  db_column='status', null=True, default= Status.ACTIVE)  
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
     
@@ -104,4 +112,16 @@ class Record(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+
+# def save(self, *args, **kwargs):
+#     user = get_current_user()
+#     if not self.pk:
+#         self.created_by = user
+#     else:
+#         self.changed_by = user
+#     super(Foomodel, self).save(*args, **kwargs)
+    
+
     

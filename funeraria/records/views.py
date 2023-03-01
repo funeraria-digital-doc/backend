@@ -23,7 +23,6 @@ def create(request, *args, **kwargs):
     try:
         if serializer.is_valid():
             try:
-                print(request.__dict__)
                 serializer.save()
                 record['record']  = serializer.data
                 record['msg']  = "Record created successfully"
@@ -89,5 +88,11 @@ def remove(request, *args, **kwargs):
 def list(request, *args, **kwargs):
     records = Record.objects.all().values()
     return Response(records, status = status.HTTP_200_OK)
+
+
+
+        
+
+
 
 
