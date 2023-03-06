@@ -79,9 +79,6 @@ def upload(request):
 @api_view(['PATCH'])
 @parser_classes([JSONParser])
 def edit_variables(request, *args, **kwargs):
-    #var_types = get_var_types()
-    print(request.data)
-    print(args)
     template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values().first()
     if template is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)

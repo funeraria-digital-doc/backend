@@ -12,7 +12,7 @@ def get_upload_path(instance, filename):
 
 class TemplateLogic(models.Model):
     title = models.CharField(max_length=255, null=False)
-    slug = models.SlugField(max_length=255, null=True)
+    slug = models.SlugField(max_length=255, null=True, blank=True)
     file = models.FileField(upload_to=get_upload_path, null=False)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
 

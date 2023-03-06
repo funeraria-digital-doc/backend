@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
+from rest_framework.decorators import parser_classes
 from records.models import Record
 from records.serealizers import RecordCreateSerializer, RecordUpdateSerializer
 
@@ -16,26 +18,34 @@ from rest_framework.parsers import  JSONParser
     operation_description="Create a new Record"
 )    
 @api_view(['POST'])
+@parser_classes([MultiPartParser])
 def create(request, *args, **kwargs):
-    data = JSONParser().parse(request)
-    serializer = RecordCreateSerializer(data=data)
     record = {}
+    for requestPart in request.POST:
+        record[requestPart] = request.POST.get(requestPart)
+    for requestFile in request.FILES:
+        record[requestFile] = request.FILES.get(requestFile)
+       
+    serializer = RecordCreateSerializer(data=record)
+    finalRecord = {}
     try:
         if serializer.is_valid():
             try:
                 serializer.save()
-                record['record']  = serializer.data
-                record['msg']  = "Record created successfully"
+                finalRecord['record']  = serializer.data
+                finalRecord['msg']  = "Record created successfully"
             except Exception as e:
                 print(e)
-                record['error']   = serializer.errors
-                return Response(record, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
+                if serializer.data['photo'] is not None and serializer.data['photo'] == record['photo']:
+                    record
+                finalRecord['error']   = serializer.errors
+                return Response(finalRecord, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
         else: 
-            record['error'] = serializer.errors
+            finalRecord['error'] = serializer.errors
     except Exception as e:
-        record['error']   = "erro no is_valid"
+        finalRecord['error']   = "erro no is_valid"
         #raise serializer.errors
-    return Response({'record' : record}, status = status.HTTP_200_OK)
+    return Response({'record' : finalRecord}, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='get',
@@ -45,8 +55,8 @@ def create(request, *args, **kwargs):
 def view(request, *args, **kwargs):
     record = Record.objects.filter(pk=kwargs.get('pk')).values().first()
     if record is None:
-        return Response({"error" : "Record does not exist!"}, status = status.HTTP_200_OK)
-    return Response(record, status = status.HTTP_404_NOT_FOUND)
+        return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
+    return Response(record, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='post',
@@ -54,14 +64,20 @@ def view(request, *args, **kwargs):
     operation_description="Update a Record"
 )    
 @api_view(['POST'])
+@parser_classes([MultiPartParser])
 def update(request, *args, **kwargs):
-    record = Record.objects.filter(pk=kwargs.get('pk')).first()  
-    serializer = RecordUpdateSerializer(data = request.data,instance=record, partial=True)   
+    recordInstance = Record.objects.filter(pk=kwargs.get('pk')).first() 
+    record = {}
+    for requestPart in request.POST:
+        record[requestPart] = request.POST.get(requestPart)
+    for requestFile in request.FILES:
+        record[requestFile] = request.FILES.get(requestFile)
+    serializer = RecordUpdateSerializer(data = record,instance=recordInstance, partial=True)   
     if serializer.is_valid():
         if record is None:
                 return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
-            serializer.update(instance = record, validated_data=serializer.validated_data)
+            serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
             return Response({'error' : "something went wrong updating record","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)

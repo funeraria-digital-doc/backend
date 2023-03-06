@@ -13,10 +13,6 @@ class RecordSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RecordCreateSerializer(serializers.ModelSerializer):
-#     created_by
-# updated_by
-# created_at
-# updated_at
     class Meta:
         model = Record
         fields = '__all__'
@@ -34,9 +30,13 @@ class RecordCreateSerializer(serializers.ModelSerializer):
 
 
 class RecordUpdateSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(required = False)
+    name = serializers.CharField(required = False)
+    gender = serializers.CharField(required = False)
     class Meta:
         model = Record
         fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
         extra_kwargs = {
             'name': {
                 'validators': [

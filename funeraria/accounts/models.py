@@ -20,7 +20,7 @@ class User(AbstractUser):
         ACTIVE = "2", "Active"
         SUSPENDED = "3", "Suspended"
 
-    group_user = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True)
+    group_user = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=64, choices=Status.choices, blank=True,default=Status.ACTIVE) 
     def __str__(self):
         return self.username

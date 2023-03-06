@@ -111,11 +111,8 @@ def profile(request):
 @parser_classes([MultiPartParser])
 @permission_classes([IsAuthenticated])
 def edit_profile(request, *args, **kwargs):
-
-    print(request.auth)
     user = Token.objects.get(key=request.auth).user
     if(User.objects.filter(username=user.username).exists()):
-        print(user)
         serializer = EditProfileSerializer(data = request.data, partial=True)   
         print(serializer.is_valid())
         if serializer.is_valid():
