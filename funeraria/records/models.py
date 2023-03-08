@@ -4,6 +4,10 @@ from groups.models import Group
 from django.db.models.signals import post_delete, pre_save
 from django.dispatch import receiver
 import os
+from django_currentuser.db.models import CurrentUserField
+
+# from django_currentuser.middleware import (
+#     get_current_user, get_current_authenticated_user)
 
 
 def get_upload_path(instance, filename):
@@ -16,10 +20,6 @@ def get_upload_path(instance, filename):
         return "records/default/" + instance.name + '/' + filename
     return '/' + filename
 
-
-
-
-    
 
 class Record(models.Model):
     class Gender(models.TextChoices):
@@ -41,9 +41,8 @@ class Record(models.Model):
         ARCHIVED = "Archived"
 
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, related_name = "record_group")
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_by', editable=False)
-    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name = "record_updated_by")
-
+    created_by = CurrentUserField(related_name='record_created_by')
+    updated_by = CurrentUserField(related_name='record_updated_by',on_update=True)
     phone = models.CharField(max_length=32, db_column='phone') 
     email = models.EmailField(max_length=32, db_column='email', null=True, blank=True) 
     status = models.CharField(max_length=64, choices=Status.choices,  db_column='status', null=True, blank=True, default= Status.ACTIVE)  
@@ -117,14 +116,16 @@ class Record(models.Model):
         return self.name
     
 
-
-# def save(self, *args, **kwargs):
+# @receiver(pre_save)
+# def presave(sender, instance, *args, **kwargs):
 #     user = get_current_user()
-#     if not self.pk:
-#         self.created_by = user
-#     else:
-#         self.changed_by = user
-#     super(Foomodel, self).save(*args, **kwargs)
+#     print(user.__dict__)
+#     if user.id:
+#         print('passa no none')
+#         if not instance.pk:
+#             instance.created_by = user
+#         else:
+#             instance.updated_by = user
 
 @receiver(post_delete, sender=Record)
 def delete_record_files(sender, instance=None, **kwargs):
