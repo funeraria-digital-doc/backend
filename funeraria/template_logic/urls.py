@@ -12,6 +12,8 @@ urlpatterns = [
     path('remove/<pk>', views.remove, name='remove'),
     path('get-variables/<pk>', views.get_variables, name='get_variables'),
     path('edit-variables/<pk>', views.edit_variables, name='edit_variables')
+    # path('edit-variables/<pk>', views.edit_variables, name='edit_variables')
+    # path('edit-variables/<pk>', views.edit_variables, name='edit_variables')
 ]
 
 if settings.DEBUG:

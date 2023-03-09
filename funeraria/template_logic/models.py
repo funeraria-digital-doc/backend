@@ -14,6 +14,7 @@ class TemplateLogic(models.Model):
     slug = models.SlugField(max_length=255, null=True, blank=True)
     file = models.FileField(upload_to=get_upload_path, null=False)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    validations = models.JSONField(null=True, blank=True)
     created_by = CurrentUserField(related_name='template_created_by')
     updated_by = CurrentUserField(related_name='template_updated_by',on_update=True)
 
