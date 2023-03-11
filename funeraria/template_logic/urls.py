@@ -11,8 +11,8 @@ urlpatterns = [
     path('edit/<pk>', views.edit, name='edit'),
     path('remove/<pk>', views.remove, name='remove'),
     path('get-variables/<pk>', views.get_variables, name='get_variables'),
-    path('edit-variables/<pk>', views.edit_variables, name='edit_variables')
-    # path('edit-variables/<pk>', views.edit_variables, name='edit_variables')
+    path('edit-variables/<pk>', views.edit_variables, name='edit_variables'),
+    path('<pk>/get-validations', views.get_validations, name='get_validations'),
     # path('edit-variables/<pk>', views.edit_variables, name='edit_variables')
 ]
 

@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
 from groups.models import Group
+from accounts.models import User
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -19,7 +20,7 @@ from rest_framework.decorators import parser_classes
 def create(request, *args, **kwargs):
     data = JSONParser().parse(request)
     serializer = GroupCreateSerializer(data=data)
-    #serializer = GroupCreateSerializer(data=request.data)
+    serializer = GroupCreateSerializer(data=request.data)
     group = {}
     try:
         if serializer.is_valid():

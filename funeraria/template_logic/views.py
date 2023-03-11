@@ -166,6 +166,20 @@ def get_doc_variables(template):
         'doc' : doc
     }
 
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get Template Validations"
+) 
+@api_view(['GET'])
+def get_validations(request, *args, **kwargs):
+    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).first()
+    if template is None:
+        return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
+    try:
+        return Response({"success" : "Template deleted successfully!","data" : template.validations}, status=status.HTTP_200_OK)
+    except:
+        return Response({"success" : "An error as occured. Try again later!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 

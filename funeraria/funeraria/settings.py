@@ -49,9 +49,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'funeraria',
+    'groups',
     'accounts',
     'template_logic',
-    'groups',
     'records',
     'drf_yasg'
 ]
@@ -90,7 +90,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'funeraria.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
