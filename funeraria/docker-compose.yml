@@ -7,12 +7,12 @@ services:
     ports:
       - 27017:27017
     container_name: mongodb
-  # web:
-  #   build: .
-  #   command: /bin/sh "./project_start.sh"
-  #   ports:
-  #     - "9000:9000"
-  #   env_file:
-  #     - web-variables.env
-  #   depends_on:
-  #     - db
+  web:
+    build: .
+    command: /bin/sh "./project_start.sh"
+    ports:
+      - "9000:9000"
+    env_file:
+      - web-variables.env
+    depends_on:
+      - db
