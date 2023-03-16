@@ -16,6 +16,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
+import json
 
 @swagger_auto_schema(
     method='get',
@@ -41,6 +42,7 @@ def get_variables(request, *args, **kwargs):
     variables = get_doc_variables(template)['vars']
     return Response(variables, status = status.HTTP_200_OK)
 
+
 @swagger_auto_schema(
     method='post',
     request_body=UploadSerializer,
@@ -49,23 +51,36 @@ def get_variables(request, *args, **kwargs):
 @api_view(['POST'])
 @parser_classes([MultiPartParser])
 def upload(request):
+    print(request.POST.get('validations'))
     data = {
         'title' : request.POST.get('title'),
         'group' : request.POST.get('group'),
         'file' : request.FILES.get('file'),
+        'validations' : json.loads(request.POST.get('validations'))
     }
     form = UploadSerializer(data = data)
     if form.is_valid():
-        if data['file']:
-            myfile = data['file']
-            fs = FileSystemStorage()
-            if fs.exists(myfile.name):
-                return Response({'error' : 'File name already exists!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            form.save()
-            return Response({'data' : form.data}, status=status.HTTP_200_OK)
-        else:
-            return Response("no valid 2", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print("passou")
+        try:
+            if data['file']:
+                myfile = data['file']
+                fs = FileSystemStorage()
+                if fs.exists(myfile.name):
+                    return Response({'error' : 'File name already exists!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+                try:
+                    form.save()
+                    return Response({'data' : form.data}, status=status.HTTP_200_OK)
+                except Exception as e:
+                     print("pois mas foi aqui")
+                     print(e)
+                     return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                return Response("no valid 2", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
+        print("validação")
         return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(       

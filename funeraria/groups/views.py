@@ -20,7 +20,6 @@ from rest_framework.decorators import parser_classes
 def create(request, *args, **kwargs):
     data = JSONParser().parse(request)
     serializer = GroupCreateSerializer(data=data)
-    serializer = GroupCreateSerializer(data=request.data)
     group = {}
     try:
         if serializer.is_valid():

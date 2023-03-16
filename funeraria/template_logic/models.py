@@ -19,35 +19,61 @@ class FieldType(models.TextChoices):
         DATE = "Date"
         DATETIME = "DateTime"
 
-class Option(models.Model):
-    value = models.CharField(max_length=128)
+class VariableType(models.TextChoices):
+        STRING = "String"
+        INTEGER = "Integer"
+        FLOAT = "Float"
+        DECIMAL = "Decimal"
+        DATE = "Date"
+        DATETIME = "Datetime"
+        BOOLEAN = "Boolean"
+        JSON = "Json"
 
+class Option(models.Model):
+    label = models.CharField(max_length=128)
+    value = models.CharField(max_length=128)
     class Meta:
         abstract = True
+    def __str__(self):
+        return self.value
 
-class Validation(models.Model):
-    name = models.CharField(max_length=128)
-    optional = models.BooleanField(default=True)
-    options = models.EmbeddedField(
+class Options(models.Model):
+    options = options = models.ArrayField(
         model_container=Option
     )
-    field_type = models.CharField(max_length=64, choices=FieldType.choices,  db_column='field_type')
-    placeholder = models.CharField(max_length=64)
-    format = models.CharField(max_length=32)
-
+    variable_type = models.CharField(max_length=128,choices=VariableType.choices,  db_column='variable_type')
     class Meta:
         abstract = True
+
+
+
+   
+class Validation(models.Model):
+    name = models.CharField(max_length=128)
+    optional = models.BooleanField(default=True, blank=True)
+    options = models.EmbeddedField(
+        model_container=Options,
+        null=True,
+        blank=True
+    )
+    field_type = models.CharField(max_length=64, choices=FieldType.choices,  db_column='field_type')
+    placeholder = models.CharField(max_length=64, blank=True, null=True)
+    format = models.CharField(max_length=32, null=True, blank=True, default="")
+    label = models.CharField(max_length=32, null=True, blank=True)
+
+    class Meta:
+        abstract = True,
 
 class TemplateLogic(models.Model):
     title = models.CharField(max_length=255, null=False)
     slug = models.SlugField(max_length=255, null=True, blank=True)
     file = models.FileField(upload_to=get_upload_path, null=False)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
-    validations = models.EmbeddedField(
+    validations = models.ArrayField(
         model_container=Validation
-    ) 
-    created_by = CurrentUserField(related_name='template_created_by')
-    updated_by = CurrentUserField(related_name='template_updated_by',on_update=True)
+    )
+    created_by = CurrentUserField(related_name='template_created_by') # type: ignore
+    updated_by = CurrentUserField(related_name='template_updated_by',on_update=True) # type: ignore
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
 
@@ -55,8 +81,7 @@ class TemplateLogic(models.Model):
         if not self.slug:
             self.slug = slugify(self.title)
         super(TemplateLogic, self).save(*args, **kwargs)
-
-
+        
     def __str__(self):
         return self.title
 
