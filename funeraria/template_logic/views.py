@@ -5,6 +5,8 @@ from rest_framework.decorators import api_view, permission_classes
 from django.utils.decorators import method_decorator
 from rest_framework.permissions import IsAuthenticated
 from docxtpl import DocxTemplate
+from accounts.models import User
+from template_logic.validation_helper import *
 from template_logic.variables import get_var_types
 from groups.models import Group
 from template_logic.serealizers import UploadSerializer, EditSerializer
@@ -12,11 +14,13 @@ from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from rest_framework import generics
 from template_logic.models import TemplateLogic
+from records.models import Record
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
 import json
+from rest_framework.authtoken.models import Token
 
 @swagger_auto_schema(
     method='get',
@@ -42,7 +46,6 @@ def get_variables(request, *args, **kwargs):
     variables = get_doc_variables(template)['vars']
     return Response(variables, status = status.HTTP_200_OK)
 
-
 @swagger_auto_schema(
     method='post',
     request_body=UploadSerializer,
@@ -51,30 +54,32 @@ def get_variables(request, *args, **kwargs):
 @api_view(['POST'])
 @parser_classes([MultiPartParser])
 def upload(request):
-    print(request.POST.get('validations'))
+    dup = hasDuplicates(request.POST.get('validations'))
+    if dup:
+        return dup
     data = {
         'title' : request.POST.get('title'),
         'group' : request.POST.get('group'),
         'file' : request.FILES.get('file'),
-        'validations' : json.loads(request.POST.get('validations'))
+        'validations' : json.loads(request.POST.get('validations')),
+        'send_type' : json.loads(request.POST.get('send_type')),
+        'send_email_to' : json.loads(request.POST.get('send_email_to')) if request.POST.get('send_email_to') else [],
+        'send_email_to_cc' : json.loads(request.POST.get('send_email_to_cc')) if request.POST.get('send_email_to_cc') else [],
+        'send_email_to_bcc' : json.loads(request.POST.get('send_email_to_bcc')) if request.POST.get('send_email_to_bcc') else [],
     }
     form = UploadSerializer(data = data)
     if form.is_valid():
-        print("passou")
         try:
             if data['file']:
                 myfile = data['file']
                 fs = FileSystemStorage()
                 if fs.exists(myfile.name):
                     return Response({'error' : 'File name already exists!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
                 try:
                     form.save()
                     return Response({'data' : form.data}, status=status.HTTP_200_OK)
                 except Exception as e:
-                     print("pois mas foi aqui")
-                     print(e)
-                     return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                     return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             else:
                 return Response("no valid 2", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
@@ -137,20 +142,33 @@ def download(request):
 
 @swagger_auto_schema(
     method='patch',
-    request_body=EditSerializer,
+    request_body=UploadSerializer,
     operation_description="Edit a template"
 )    
 @api_view(['PATCH'])
 @parser_classes([MultiPartParser])
 def edit(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(pk=kwargs.get('pk')).first()  
-    serializer = UploadSerializer(data = request.data,instance=template, partial=True)   
+    dup = hasDuplicates(request.POST.get('validations'))
+    if dup:
+        return dup
+    data = {
+        'title' : request.POST.get('title'),
+        'group' : request.POST.get('group'),
+        'file' : request.FILES.get('file'),
+        'validations' : json.loads(request.POST.get('validations')) if request.POST.get('validations') else {},
+        'send_type' : json.loads(request.POST.get('send_type')) if request.POST.get('validations') else "",
+        'send_email_to' : json.loads(request.POST.get('send_email_to')) if request.POST.get('validations') else [],
+        'send_email_to_cc' : json.loads(request.POST.get('send_email_to_cc')) if request.POST.get('send_email_to_cc') else [],
+        'send_email_to_bcc' : json.loads(request.POST.get('send_email_to_bcc')) if request.POST.get('send_email_to_bcc') else [],
+    }
+    serializer = UploadSerializer(data = data,instance=template, partial=True)   
     print(serializer.is_valid())
     if serializer.is_valid():
         if template is None:
                 return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
-            serializer.update(instance = template, validated_data=serializer.validated_data)
+            #serializer.update(instance = template, validated_data=serializer.validated_data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
             return Response({'error' : "something went wrong updating template","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
@@ -187,20 +205,89 @@ def get_doc_variables(template):
 ) 
 @api_view(['GET'])
 def get_validations(request, *args, **kwargs):
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).first()
-    if template is None:
+    template_validations = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('validations')
+    if template_validations is None:
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     try:
-        return Response({"success" : "Template deleted successfully!","data" : template.validations}, status=status.HTTP_200_OK)
+        return Response({"success" : "Template  validations checked successfully!","data" : template_validations}, status=status.HTTP_200_OK)
     except:
         return Response({"success" : "An error as occured. Try again later!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@swagger_auto_schema(
+    method='post',
+    operation_description="Check Template Validations"
+) 
+@api_view(['POST'])
+def check_validations(request, *args, **kwargs):
+    if not TemplateLogic.objects.filter(id=kwargs.get('pk')).exists():
+        return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
+    template_validations = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('validations')
+    validate_data = run_template_validations(list(template_validations), request.data)
+    if not validate_data.get('valid') :
+        return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"success" : True}, status=status.HTTP_200_OK)
+    
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get Template"
+) 
+@api_view(['GET'])
+def get_template(request, *args, **kwargs):
+    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).first()
+    if template is None:
+        return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
+    try:
+        return Response({"data" : template}, status=status.HTTP_200_OK)
+    except:
+        return Response({"error" : "An error as occured. Try again later!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@swagger_auto_schema(
+    method='get',
+    operation_description="List group templates"
+) 
+@api_view(['GET'])
+def list_group_templates(request):
+    #user = Token.objects.get(key=request.auth.key).user
+    if request.user is not None:
+        user = User.objects.get(id=request.user.id)
+        if (user.is_superuser or user.is_staff) and request.GET.get('group_id'):
+            group_id = request.GET.get('group_id')
+        elif (user.is_superuser or user.is_staff) and (not request.GET.get('group_id') or request.GET.get('group_id') == ""):
+            return Response({'error' : 'group_id field is required'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            group_id = user.group_user_id
+        if Group.objects.filter(id=group_id).exists():
+            if group_id is not None:
+                templates = TemplateLogic.objects.filter(group_id = group_id).values('id', 'title','send_type','file','validations', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc')
+                if templates is not None:
+                    if(templates.count() > 0):
+                        return Response({'data' : templates}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({'error' : 'No templates available'}, status=status.HTTP_400_BAD_REQUEST)
+        else: 
+            if user.is_superuser or user.is_staff:
+                return Response({'error' : 'Invalid group_id'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({'error' : 'User is not assigned to group'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error' : 'Invalid user'}, status=status.HTTP_400_BAD_REQUEST)
 
+def hasDuplicates(validations):
+    decoder = json.JSONDecoder(object_pairs_hook=parse_object_pairs)
+    if validations:
+        obj = decoder.decode(validations)
+        keys = []
+        seen = set()
+        for key, value in obj:
+            if key not in seen:
+                keys.append(key)
+                seen.add(key)
+            else:
+                return Response({"errors" : {'validations' : "Duplicate keys in validations field", 'keys' : keys}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return False
 
-
-
+def parse_object_pairs(pairs):
+    return pairs
     
     
     

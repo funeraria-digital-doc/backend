@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-
+from rest_framework.validators import UniqueValidator
 from accounts.models import User
 class RegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(style={'input_type': 'password'}, write_only=True)
@@ -45,15 +45,15 @@ class UserLoginSerializer(serializers.ModelSerializer):
 
 
 class EditProfileSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(required=False)
-    username = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False,validators=[UniqueValidator(queryset=User.objects.all())])
+    username = serializers.CharField(required=False,validators=[UniqueValidator(queryset=User.objects.all())])
     class Meta:
         model = User
         fields = ['username', 'email']
 
 class EditProfileAdminSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=False)
-    password = serializers.CharField(required=False)
+    username = serializers.CharField(required=False,validators=[UniqueValidator(queryset=User.objects.all())])
+    password = serializers.CharField(required=False,validators=[UniqueValidator(queryset=User.objects.all())])
     class Meta:
         model = User
         fields = '__all__'

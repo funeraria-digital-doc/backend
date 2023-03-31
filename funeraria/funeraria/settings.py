@@ -66,6 +66,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
+
+    #'funeraria.middlewares.template_logic.middleware.DuplicateKeysMiddleware',
 ]
 
 ROOT_URLCONF = 'funeraria.urls'
