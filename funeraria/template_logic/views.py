@@ -85,7 +85,6 @@ def upload(request):
         except Exception as e:
             return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        print("validação")
         return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(       
@@ -223,7 +222,7 @@ def check_validations(request, *args, **kwargs):
     if not TemplateLogic.objects.filter(id=kwargs.get('pk')).exists():
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     template_validations = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('validations')
-    validate_data = run_template_validations(list(template_validations), request.data)
+    validate_data = run_template_validations(list(template_validations), request.data, "CHECK_VALIDATIONS")
     if not validate_data.get('valid') :
         return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
     return Response({"success" : True}, status=status.HTTP_200_OK)

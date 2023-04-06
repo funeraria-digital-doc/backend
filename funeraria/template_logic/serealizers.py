@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from django.forms import ValidationError
 from rest_framework import serializers
 from accounts.models import User
@@ -6,6 +7,8 @@ from records.models import Record
 from template_logic.models import TemplateLogic
 from docxtpl import DocxTemplate
 from json import JSONDecoder
+
+from template_logic.validation_helper import run_template_validations
 
 
 
@@ -100,13 +103,21 @@ class UploadSerializer(serializers.ModelSerializer):
             class Meta:
                 fields = ['options','variable_type']
 
-        class DefaultFieldSerializer(serializers.Serializer):
+        class CharOrListField(serializers.ListField):
+            child = serializers.CharField()
 
-            value = serializers.CharField()
-            variable_type = serializers.ChoiceField(choices = DEFAULT_VARIABLE_TYPE_CHOICES)
-            
-            class Meta:
-                fields = ['value','variable_type']
+            def to_internal_value(self, data):
+                if isinstance(data,list):
+                    return super().to_internal_value(data)
+                else:
+                    return [data]
+                
+            def to_representation(self, value):
+                if isinstance(value,list):
+                    return super().to_representation(value)
+                else:
+                    return value
+
 
         name = serializers.CharField()
         optional = serializers.BooleanField()
@@ -122,7 +133,9 @@ class UploadSerializer(serializers.ModelSerializer):
         db_field_reference = serializers.CharField(required = False,allow_blank=True)
         min = serializers.IntegerField(required = False)
         max = serializers.IntegerField(required = False)
-        default_value = DefaultFieldSerializer(required=False,allow_null= True)
+        default_value = CharOrListField(required=False,allow_null= True, allow_empty= True, child=serializers.CharField())
+
+        
 
         def validate(self, data):
             data_dict = dict(data)
@@ -152,9 +165,21 @@ class UploadSerializer(serializers.ModelSerializer):
                 if (data_dict.get('db_collection') == "RECORDS" and data_dict.get('db_field_reference') not in [f.name for f in Record._meta.get_fields()]) or (data_dict.get('db_collection') == "GROUPS" and data_dict.get('db_field_reference') not in [f.name for f in Group._meta.get_fields()]) or (data_dict.get('db_collection') == "USERS" and data_dict.get('db_field_reference') not in [f.name for f in User._meta.get_fields()]):
                     validation_errors['db_field_reference'] = ['Field name is invalid.']
             if data_dict.get('default_value') is not None and len(str(data_dict.get('default_value')).strip()) > 0:
-                print('tenho de correr validações para todos os campos como está no validation_helper run_validations') 
-
-
+                #print(data)                   
+                prep_var_validation = [{"validations" : {"default_value":data}}]
+                
+                result = run_template_validations(prep_var_validation,{'default_value' : data.get('default_value')}, "CREATE_TEAMPLATE")
+                if 'errors' in result and result.get('errors') is not None:
+                    errors = result.get('errors')
+                    if 'default_value' in errors:
+                        if type(errors.get('default_value')) is dict:
+                            default_value_errors = errors.get('default_value')
+                            for key,value in default_value_errors.items():
+                                if 'default_value' not in validation_errors:
+                                    validation_errors['default_value'] = []
+                                validation_errors['default_value'].append(value) 
+                        else:
+                            validation_errors['default_value'] = errors.get('default_value')   
             if validation_errors:
                 raise ValidationError(validation_errors)
             return data
