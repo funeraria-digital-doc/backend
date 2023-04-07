@@ -12,6 +12,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
+import json
 
 from funeraria.permissions import IsAdmin, IsSuperUser, isEqualOrUpperPermission
 
@@ -108,13 +109,12 @@ def profile(request):
     operation_description="Edit a User profile"
 )    
 @api_view(['PATCH'])
-@parser_classes([MultiPartParser])
+#@parser_classes([MultiPartParser])
 @permission_classes([IsAuthenticated])
 def edit_profile(request, *args, **kwargs):
     user = Token.objects.get(key=request.auth).user
     if(User.objects.filter(username=user.username).exists()):
-        serializer = EditProfileSerializer(data = request.data, partial=True)   
-        print(serializer.is_valid())
+        serializer = EditProfileSerializer(data = request.data,instance=user, partial=True)   
         if serializer.is_valid():
             try:            
                 serializer.update(instance = user, validated_data=serializer.validated_data)
@@ -137,7 +137,7 @@ def edit_profile(request, *args, **kwargs):
     operation_description="Create a super user"
 )    
 @api_view(['POST'])
-@parser_classes([MultiPartParser])
+#@parser_classes([MultiPartParser])
 @permission_classes([IsSuperUser])
 def create_superuser(request, *args, **kwargs):
     serializer = RegistrationSerializer(data=request.data)
@@ -164,7 +164,7 @@ def create_superuser(request, *args, **kwargs):
     operation_description="Create a staff user"
 )    
 @api_view(['POST'])
-@parser_classes([MultiPartParser])
+#@parser_classes([MultiPartParser])
 @permission_classes([IsAdmin])
 def create_staffuser(request, *args, **kwargs): 
     serializer = RegistrationSerializer(data=request.data)
@@ -209,7 +209,7 @@ def profile_admin(request, *args, **kwargs):
     operation_description="Edit a User profile"
 )    
 @api_view(['PATCH'])
-@parser_classes([MultiPartParser])
+#@parser_classes([MultiPartParser])
 @permission_classes([isEqualOrUpperPermission])
 def edit_profile_admin(request, *args, **kwargs):
     user = User.objects.filter(id=kwargs['pk']).first()
@@ -258,7 +258,7 @@ def list_active_users(request):
 @api_view(['GET'])
 @permission_classes([IsAdmin])
 def list_all_users(request): 
-    users = User.objects.all()
+    users = User.objects.all().values()
     if users is None:
         return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
     return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   

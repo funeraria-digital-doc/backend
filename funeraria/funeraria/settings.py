@@ -49,9 +49,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'funeraria',
+    'groups',
     'accounts',
     'template_logic',
-    'groups',
     'records',
     'drf_yasg'
 ]
@@ -66,6 +66,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_currentuser.middleware.ThreadLocalUserMiddleware',
+
+    #'funeraria.middlewares.template_logic.middleware.DuplicateKeysMiddleware',
 ]
 
 ROOT_URLCONF = 'funeraria.urls'
@@ -90,7 +92,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'funeraria.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
@@ -208,6 +209,11 @@ SWAGGER_SETTINGS = {
             'in': 'header',
             'placeholder' : 'Token xxx'
         }
-    }
+    },
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
+    ],
 }
 
