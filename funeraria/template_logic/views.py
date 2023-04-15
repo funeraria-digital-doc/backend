@@ -173,43 +173,11 @@ def download(request, *args, **kwargs):
     if request.data.get('to_send_option') not in dict(SEND_TYPE_CHOICES):
         return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)
     
-    if request.data.get('to_send_option') == "EMAIL" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
-        from django.core.mail import send_mail, EmailMessage, EmailMultiAlternatives
-        from django.template.loader import render_to_string
-        from django.utils.html import strip_tags
-        context = {'variable1': 'Value 1', 'variable2': 'Value 2'}
-        # Get the rendered HTML of the email template
-        html_message = render_to_string('email_template.html', context)
-        print(html_message)
-        # Convert the HTML to plain text for the email body
-        plain_message = strip_tags(html_message)
-        print(plain_message)
-        # Set up the email parameters
-        from_email = 'from@example.com'
-        html_message = html_message
-        group = Group.objects.filter(id= template.get('group_id')).values().first()
-        subject = group.get('name') + " - " + template.get('title')
-        attachments = []
-        if template.get('file'):
-            attachments.append("media/" + template.get('file'))
-        
-        # Send the email
-        try:
-            email = EmailMultiAlternatives(subject, plain_message, from_email, template.get('send_email_to'))
-            email.attach_alternative(html_message, 'text/html')
-            for attachment in attachments:
-                with open(attachment, 'rb') as file:
-                    filename = os.path.basename(attachment)
-                    email.attach(filename, file.read())
-                    
-            email.send()
-            #send_mail(subject, message, from_email, template.get('send_email_to'), html_message=html_message)
-            print('mandou email')
-        except Exception as e:
-            print(e)
+    
         
             
-
+    doc = {}
+    doc_response = None
     if request.data.get('to_send_option') == "DOCUMENT" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
         validate_data = run_template_validations(list(template_validations), request.data.get('data'), "CHECK_VALIDATIONS")
         if not validate_data.get('valid') :
@@ -224,6 +192,7 @@ def download(request, *args, **kwargs):
             else:
                 editDocRes = editDocument(template, changeVariablesObject, False)  
                 document = editDocRes.get('doc')
+                doc = document
                 buffer = io.BytesIO()
                 document.save(buffer)
                 buffer.seek(0)
@@ -231,7 +200,47 @@ def download(request, *args, **kwargs):
                 import random
                 random_number = random.randint(1, 100000000)
                 response['Content-Disposition'] = 'attachment; filename='+template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx' 
-                return response
+                doc_response = response
+                #return response
+
+    if request.data.get('to_send_option') == "EMAIL" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.utils.html import strip_tags
+        context = {'variable1': 'Value 1', 'variable2': 'Value 2'}
+        # Get the rendered HTML of the email template
+        html_message = render_to_string('email_template.html', context)
+        # Convert the HTML to plain text for the email body
+        plain_message = strip_tags(html_message)
+        # Set up the email parameters
+        from_email = 'from@example.com'
+        html_message = html_message
+        group = Group.objects.filter(id= template.get('group_id')).values().first()
+        subject = group.get('name') + " - " + template.get('title')
+        attachments = []
+        if template.get('file'):
+            attachments.append("media/" + template.get('file'))
+        # Send the email
+        try:
+            email = EmailMultiAlternatives(subject, plain_message, from_email, template.get('send_email_to'))
+            email.attach_alternative(html_message, 'text/html')
+            for attachment in attachments:
+                with open(attachment, 'rb') as file:
+                    filename = os.path.basename(attachment)
+                    email.attach(filename, file.read())
+            if doc:
+                buffer = io.BytesIO()
+                doc.save(buffer)
+                buffer.seek(0)
+                email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                #email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', doc)
+            email.send()
+            print('mandou email')
+        except Exception as e:
+            print(e)
+
+    if doc_response:
+        return doc_response
     return Response({'errors' : "Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
 
