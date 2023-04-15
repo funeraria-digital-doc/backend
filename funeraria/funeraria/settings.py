@@ -34,6 +34,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('MAILHOG_HOST')
+EMAIL_PORT = config('MAILHOG_PORT')
 
 # Application definition
 
@@ -45,7 +48,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework_swagger',
-    
     'rest_framework',
     'rest_framework.authtoken',
     'funeraria',
