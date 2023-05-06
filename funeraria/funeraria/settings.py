@@ -30,7 +30,7 @@ DatabaseOperations.conditional_expression_supported_in_where_clause = (
 SECRET_KEY = 'django-insecure-4ww@6b^chrverbzy5=33$#wm9_wr(&d=2n5&18szkaw-38)lqv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 ACCOUNT_EMAIL_VERIFICATION = 'none'

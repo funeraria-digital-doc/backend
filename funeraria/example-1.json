@@ -1,0 +1,218 @@
+{
+    "Flores" : {
+        "name" : "Flores",
+        "optional" : true,
+        "field_type" : "TEXT",
+        "placeholder" : "2 arranjos grandes",
+        "label" : "Requeriemento de flores",
+        "is_field_custom" : true
+    },
+    "Viaturas" : {
+        "name" : "Viaturas",
+        "optional" : true,
+        "field_type" : "TEXT",
+        "placeholder" : "2 carrinhas",
+        "label" : "Viaturas necessárias para o serviço",
+        "is_field_custom" : true
+    },
+    "Nome" : {
+        "name" : "Nome",
+        "optional" : false,
+        "field_type" : "TEXT",
+        "is_field_custom" : false,
+        "db_collection" : "USERS",
+        "db_field_reference" : "username"
+    },
+    "GroupName" : {
+        "name" : "GroupName",
+        "optional" : false,
+        "field_type" : "TEXT",
+        "is_field_custom" : false,
+        "db_collection" : "GROUPS",
+        "db_field_reference" : "name"
+    },
+    "Email" : {
+        "name" : "Email",
+        "optional" : false,
+        "field_type" : "EMAIL",
+        "is_field_custom" : true,
+        "placeholder" : "1@1.pt",
+        "label" : "Email do sapateiro",
+        "default_value" : "teste@teste.pt"
+    },
+    "Padre" : {
+        "name" : "Padre",
+        "optional" : false,
+        "field_type" : "SELECT",
+        "options" : {
+            "options" :[
+                {
+                    "label" : "padre1",
+                    "value" : "padre1"
+                },
+                {
+                    "label" : "padre2",
+                    "value" : "padre2"
+                },
+                {
+                    "label" : "padre3",
+                    "value" : "padre3"
+                },
+                {
+                    "label" : "padre4",
+                    "value" : "padre4"
+                },
+                {
+                    "label" : "padre5",
+                    "value" : "padre5"
+                }
+            ],
+            "variable_type" : "STRING"
+        },
+        "is_field_custom" : true,
+        "placeholder" : "Selecionar um padre",
+        "label" : "Selecione um padre",
+        "default_value" : ["padre1"]
+    },
+    "PadreMulti" : {
+        "name" : "PadreMulti",
+        "optional" : false,
+        "field_type" : "MULTISELECT",
+        "options" :{
+            "options" :[
+                {
+                    "label" : "padre1",
+                    "value" : "padre1"
+                },
+                {
+                    "label" : "padre2",
+                    "value" : "padre2"
+                },
+                {
+                    "label" : "padre3",
+                    "value" : "padre3"
+                },
+                {
+                    "label" : "padre4",
+                    "value" : "padre4"
+                },
+                {
+                    "label" : "padre5",
+                    "value" : "padre5"
+                }
+            ],
+            "variable_type" : "STRING"
+        },
+        "is_field_custom" : true,
+        "placeholder" : "Selecionar padres",
+        "label" : "Selecione padres",
+        "min" : 2,
+        "max" : 4,
+        "default_value" : ["padre3", "padre1", "padre2"]
+    },
+    "teste_text" : {
+        "name" : "Teste text",
+        "optional" : true,
+        "field_type" : "TEXT",
+        "is_field_custom" : true,
+        "min" : 10,
+        "max" : 20
+    },
+    "teste_text_required" : {
+        "name" : "Teste text",
+        "optional" : false,
+        "field_type" : "TEXT",
+        "is_field_custom" : true,
+        "min" : 10,
+        "max" : 20
+    },
+    "teste_textarea" : {
+        "name" : "Teste textarea",
+        "optional" : true,
+        "field_type" : "TEXTAREA",
+        "is_field_custom" : true,
+        "min" : 10,
+        "max" : 20
+    },
+    "teste_textarea_required" : {
+        "name" : "Teste textarea",
+        "optional" : false,
+        "field_type" : "TEXTAREA",
+        "is_field_custom" : true,
+        "min" : 10,
+        "max" : 20,
+        "default_value" : "23:59:00000000000"
+    },
+    "teste_date" : {
+        "name" : "Teste date",
+        "optional" : false,
+        "field_type" : "DATE",
+        "is_field_custom" : true,
+        "is_date_numeric" : true,
+        "format" : "DAY_MONTH_YEAR"
+    },
+    "teste_date_required" : {
+        "name" : "Teste date required",
+        "optional" : false,
+        "field_type" : "DATE",
+        "is_field_custom" : true,
+        "is_date_numeric" : false,
+        "format" : "MONTH_YEAR"
+    },
+    "teste_datetime" : {
+        "name" : "Teste datetime",
+        "optional" : false,
+        "field_type" : "DATETIME",
+        "is_field_custom" : true,
+        "is_date_numeric" : true,
+        "format" : "DAY_MONTH_YEAR_HOUR_MINUTE_SECOND"
+    },
+    "teste_datetime_required" : {
+        "name" : "Teste datetime_required",
+        "optional" : false,
+        "field_type" : "DATETIME",
+        "is_field_custom" : true,
+        "is_date_numeric" : false,
+        "format" : "DAY_MONTH_HOUR_MINUTE"
+    },
+    "teste_time_required_1" : {
+        "name" : "Teste time_required",
+        "optional" : false,
+        "field_type" : "TIME",
+        "is_field_custom" : true,
+        "is_date_numeric" : false,
+        "format" : "HOURS_MINUTES",
+        "default_value" : "23:59"
+    },
+    "teste_time" : {
+        "name" : "Teste time",
+        "optional" : false,
+        "field_type" : "TIME",
+        "is_field_custom" : true,
+        "is_date_numeric" : true,
+        "format" : "HOURS_MINUTES_SECONDS"
+    },
+    "teste_time_required" : {
+        "name" : "Teste time_required",
+        "optional" : false,
+        "field_type" : "TIME",
+        "is_field_custom" : true,
+        "is_date_numeric" : false,
+        "format" : "HOURS_MINUTES",
+        "default_value" : "23:59"
+    },
+    "teste_boolean_required" : {
+        "name" : "Teste teste_boolean_required",
+        "optional" : false,
+        "field_type" : "BOOLEAN",
+        "is_field_custom" : true,
+        "default_value" : true
+    },
+    "teste_month_required_2" : {
+        "name" : "teste_year_required_2",
+        "optional" : false,
+        "field_type" : "MONTH",
+        "is_field_custom" : true,
+        "default_value" : 11
+    }
+}
