@@ -3,15 +3,13 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.db import connections
-from django.db.utils import OperationalError
-from decouple import config
+import os
 class Command(BaseCommand):
     def handle(self, *args, **options):
         User = get_user_model()
-        username = config('DJANGO_SUPERUSER_USERNAME')
-        email = config('DJANGO_SUPERUSER_EMAIL')
-        password = config('DJANGO_SUPERUSER_PASSWORD')
+        username =  os.environ['DJANGO_SUPERUSER_USERNAME']
+        email =  os.environ['DJANGO_SUPERUSER_EMAIL']
+        password =  os.environ['DJANGO_SUPERUSER_PASSWORD']
         if not User.objects.filter(username=username).exists():
             print('Creating account for %s (%s)' % (username, email))
             admin = User.objects.create_superuser(

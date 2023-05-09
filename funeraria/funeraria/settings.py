@@ -32,11 +32,13 @@ SECRET_KEY = 'django-insecure-4ww@6b^chrverbzy5=33$#wm9_wr(&d=2n5&18szkaw-38)lqv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('MAILHOG_HOST')
-EMAIL_PORT = config('MAILHOG_PORT')
+# EMAIL_HOST = config('MAILHOG_HOST')
+# EMAIL_PORT = config('MAILHOG_PORT')
+EMAIL_HOST = os.environ['MAILHOG_HOST']
+EMAIL_PORT =  os.environ['MAILHOG_PORT']
 
 # Application definition
 
@@ -100,13 +102,13 @@ WSGI_APPLICATION = 'funeraria.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME': config('DJANGO_DB_NAME'),
+        'NAME':  os.environ['DJANGO_DB_NAME'],
         'ENFORCE_SCHEMA': True,
         'CLIENT': {
-            'host': config('MONGO_HOST'),
+            'host':  os.environ['MONGO_HOST'],
             'port': 27017,
-            'username' : config('MONGO_USERNAME'),
-            'password' : config('MONGO_PASSWORD')
+            'username' :  os.environ['MONGO_USERNAME'],
+            'password' :  os.environ['MONGO_PASSWORD']
         }  
     }
 }
