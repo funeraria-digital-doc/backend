@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "Applying migrations"
-python manage.py makemigrations
-python manage.py migrate
-python manage.py initadmin
+python funeraria/manage.py makemigrations
+python funeraria/manage.py migrate
+python funeraria/manage.py initadmin
 echo "finished successfully"
-python manage.py runserver 0.0.0.0:8000
+python funeraria/manage.py runserver 0.0.0.0:8000
