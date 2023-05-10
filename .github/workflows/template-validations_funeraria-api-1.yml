@@ -15,6 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MAILHOG_HOST: ${{ secrets.MAILHOG_HOST }}
+      MAILHOG_PORT: ${{ secrets.MAILHOG_PORT }}
+      DJANGO_DB_NAME: ${{ secrets.DJANGO_DB_NAME }}
+      DEFAULT_USER: ${{ secrets.DEFAULT_USER }}
+      MONGO_USERNAME: ${{ secrets.MONGO_USERNAME }}
+      MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+      MONGO_HOST: ${{ secrets.MONGO_HOST }}
+      MONGO_PORT: ${{ secrets.MONGO_PORT }}
     steps:
       - uses: actions/checkout@v2
 
