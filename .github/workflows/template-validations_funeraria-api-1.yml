@@ -33,6 +33,10 @@ jobs:
       - name: List directory contents
         run: ls -la
 
+      - name: Set environment variables
+        env:
+          MAILHOH_HOST: ${{ env.MAILHOH_HOST }}
+
       - name: Start Project
         run: /bin/sh "funeraria/project_start.sh"
         
