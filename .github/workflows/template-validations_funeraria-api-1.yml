@@ -31,7 +31,7 @@ jobs:
         run: pip install -r ./funeraria/requirements.txt
 
       - name: Start Project
-        run: venv/bin/sh "project_start.sh"
+        run: /bin/sh "project_start.sh"
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       
