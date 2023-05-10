@@ -22,6 +22,9 @@ jobs:
       MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
       MONGO_HOST: ${{ secrets.MONGO_HOST }}
       MONGO_PORT: ${{ secrets.MONGO_PORT }}
+      DJANGO_SUPERUSER_USERNAME: ${{ secrets.DJANGO_SUPERUSER_USERNAME }}
+      DJANGO_SUPERUSER_EMAIL: ${{ secrets.DJANGO_SUPERUSER_EMAIL }}
+      DJANGO_SUPERUSER_PASSWORD: ${{ secrets.DJANGO_SUPERUSER_PASSWORD }}
     steps:
       - uses: actions/checkout@v2
 
