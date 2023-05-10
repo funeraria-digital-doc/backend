@@ -30,8 +30,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r ./funeraria/requirements.txt
 
-      - name: Start Project
-        run: /bin/sh "project_start.sh"
+      - name: List directory contents
+        run: ls -la
+
+      # - name: Start Project
+      #   run: /bin/sh "project_start.sh"
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       
