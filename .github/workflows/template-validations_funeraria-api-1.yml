@@ -39,14 +39,13 @@ jobs:
           source venv/bin/activate
       
       - name: Install dependencies
-        run: pip install -r ./funeraria/requirements.txt
-
-      - name: List directory contents
-        run: ls -la        
-
-      - name: Start Project
-        run: /bin/sh "funeraria/project_start.sh"
-        
+        run: pip install -r ./funeraria/requirements.txt 
+      - name: Make Migrations
+        run: python funeraria/manage.py makemigrations
+      - name: Migrate
+        run: python funeraria/manage.py migrate  
+      - name: Init Admin
+        run: python funeraria/manage.py initadmin  
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       
       - name: Upload artifact for deployment jobs
