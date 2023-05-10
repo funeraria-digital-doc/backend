@@ -13,7 +13,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      MAILHOH_HOST: ${{ env.MAILHOH_HOST }}
     steps:
       - uses: actions/checkout@v2
 
@@ -31,11 +32,7 @@ jobs:
         run: pip install -r ./funeraria/requirements.txt
 
       - name: List directory contents
-        run: ls -la
-
-      - name: Set environment variables
-        env:
-          MAILHOH_HOST: ${{ env.MAILHOH_HOST }}
+        run: ls -la        
 
       - name: Start Project
         run: /bin/sh "funeraria/project_start.sh"
