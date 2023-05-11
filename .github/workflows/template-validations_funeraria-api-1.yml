@@ -45,7 +45,9 @@ jobs:
       - name: Migrate
         run: python funeraria/manage.py migrate  
       - name: Init Admin
-        run: python funeraria/manage.py initadmin  
+        run: python funeraria/manage.py initadmin
+      - name: Freeze
+        run: pip freeze   
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
       
       - name: Upload artifact for deployment jobs
