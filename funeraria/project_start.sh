@@ -5,3 +5,4 @@ python funeraria/manage.py migrate
 python funeraria/manage.py initadmin
 echo "finished successfully"
 python funeraria/manage.py runserver 0.0.0.0:8000
+
