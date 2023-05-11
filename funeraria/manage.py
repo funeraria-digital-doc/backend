@@ -2,14 +2,15 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-from subprocess import call
+import subprocess 
 
 
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'funeraria.settings')
     try:
-        call(["pip", "freeze"])
+        pipfreeze_output = subprocess.check_output(["pip", "freeze"])
+        print(pipfreeze_output.decode())
         from django.core.management import execute_from_command_line
     except ImportError as exc:
         
