@@ -9,8 +9,7 @@ def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'funeraria.settings')
     try:
-        pipfreeze_output = subprocess.check_output(["pip", "freeze"])
-        print(pipfreeze_output.decode())
+        print('tenta')
         from django.core.management import execute_from_command_line
     except ImportError as exc:
         
