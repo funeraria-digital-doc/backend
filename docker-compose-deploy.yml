@@ -1,0 +1,14 @@
+version: '3.1'
+
+services:
+  gcloud:
+    image: google/cloud-sdk:433.0.0
+    volumes:
+      - gcp-creds:/creds
+      - .:/funeraria
+    working_dir: /funeraria
+    environment:
+      - CLOUDSDK_CONFIG=/creds
+  
+volumes:
+  gcp-creds:
