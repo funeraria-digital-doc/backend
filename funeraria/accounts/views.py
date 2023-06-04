@@ -36,7 +36,7 @@ def login(request):
         user = authenticate(request=request, username=username, password=password)
         if not user:
             # If we don't have a regular user, raise a ValidationError
-            return Response('Access denied: wrong email or password.',status=status.HTTP_200_OK)
+            return Response('Access denied: wrong email or password.',status=status.HTTP_401_UNAUTHORIZED)
         else:
             token = Token.objects.get_or_create(user=user)
             if token is not None and token[0] is not None:

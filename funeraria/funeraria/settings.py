@@ -33,6 +33,7 @@ SECRET_KEY = '***REMOVED-DJANGO-SECRET-KEY***'
 DEBUG = False
 
 ALLOWED_HOSTS = ['*']
+CORS_ORIGIN_ALLOW_ALL = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
@@ -59,20 +60,21 @@ INSTALLED_APPS = [
     'accounts',
     'template_logic',
     'records',
-    'drf_yasg'
+    'drf_yasg',
+    'corsheaders'
 ]
 SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_currentuser.middleware.ThreadLocalUserMiddleware',
-
+    'django_currentuser.middleware.ThreadLocalUserMiddleware'
     #'funeraria.middlewares.template_logic.middleware.DuplicateKeysMiddleware',
 ]
 
