@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from decouple import config
 from djongo.operations import DatabaseOperations
+import logging
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 DJANGO_SETTINGS_MODULE='funeraria.settings'
@@ -232,3 +233,16 @@ SWAGGER_SETTINGS = {
 
 STATIC_ROOT = '/static'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # Set the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    },
+}

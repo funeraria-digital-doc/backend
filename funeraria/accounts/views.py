@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 
-from accounts.serealizers import RegistrationSerializer,EditProfileSerializer, EditProfileAdminSerializer
+from accounts.serealizers import RegistrationSerializer,EditProfileSerializer, EditProfileAdminSerializer, ProfilePictureUploadSerializer
 from accounts.models import User
 from rest_framework.authtoken.models import Token
 
@@ -13,9 +13,12 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
 import json
+import logging
+from django.core.files.storage import FileSystemStorage
 
 from funeraria.permissions import IsAdmin, IsSuperUser, isEqualOrUpperPermission
 
+logger = logging.getLogger(__name__)
 @swagger_auto_schema(       
     method='post',
     operation_description="Login user",
@@ -52,6 +55,74 @@ def login(request):
                 return Response('error creating token',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
     else:
         return Response('Both "username" and "password" are required.',status=status.HTTP_200_OK)
+
+@swagger_auto_schema(       
+    method='post',
+    operation_description="Change user Password",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties= {
+            'password': openapi.Schema(title="password",type=openapi.TYPE_STRING),
+            'confirm_password': openapi.Schema(title="confirm_password",type=openapi.TYPE_STRING),
+        },
+    ),
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    password = request.data['password']
+    confirm_password = request.data['confirm_password']
+    if(not confirm_password or not password) :
+        return Response('Both "password" and "confirm_password" are required.',status=status.HTTP_400_BAD_REQUEST)
+    
+    if (confirm_password != password):
+        return Response('Both "password" and "confirm_password" must be equal.',status=status.HTTP_400_BAD_REQUEST)
+    
+    # Try to authenticate the user using Django auth framework.
+    user = request.user
+    if not user:
+        # If we don't have a regular user, raise a ValidationError
+        return Response('There is no user',status=status.HTTP_401_UNAUTHORIZED)
+    else:
+        user.set_password(password)
+        try:
+            user.save()
+            return Response({'success': True},status=status.HTTP_200_OK) 
+        except:
+            return Response('error changing password',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            
+
+@swagger_auto_schema(       
+    method='post',
+    operation_description="File Upload",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties= {
+            'file': openapi.Schema(title="file",type=openapi.TYPE_FILE)
+        },
+    ),
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def file_upload(request):
+    data = {}
+    data['file'] = request.FILES.get('file')
+    #file = request.FILES.get('file')
+    user = request.user
+    if not user:
+        # If we don't have a regular user, raise a ValidationError
+        return Response('There is no user',status=status.HTTP_401_UNAUTHORIZED)
+    serializer = ProfilePictureUploadSerializer(data = data,instance=user, partial=True)   
+    if serializer.is_valid():
+        try:
+            serializer.update(instance = user, validated_data=serializer.validated_data)
+            return Response({'success': True},status=status.HTTP_200_OK) 
+        except Exception as e:
+            logger.info(str(e))
+            return Response('error uploading profile image',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+    else:
+        return Response({'error' : serializer.errors},status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+ 
 
 @swagger_auto_schema(       
     method='post',
