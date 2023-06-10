@@ -1,3 +1,4 @@
+from io import BytesIO
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,9 +16,9 @@ from rest_framework.decorators import parser_classes
 import json
 import logging
 from django.core.files.storage import FileSystemStorage
-
+from django.core.serializers.json import DjangoJSONEncoder
 from funeraria.permissions import IsAdmin, IsSuperUser, isEqualOrUpperPermission
-
+import base64
 logger = logging.getLogger(__name__)
 @swagger_auto_schema(       
     method='post',
@@ -164,14 +165,33 @@ def registration(request):
 @permission_classes([IsAuthenticated])
 def profile(request): 
     user = Token.objects.get(key=request.auth.key).user
-    if(User.objects.filter(username=user.username).exists()):
-        data = {
-            'name': user.username,
+    if user:                
+        user_data = {
+            'id': user.id,
+            'username': user.username,
             'email': user.email,
             'user_permissions': user.get_user_permissions(),
             'group_permissions': user.get_group_permissions()
         }
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(user_data, status=status.HTTP_200_OK)
+    return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
+
+@swagger_auto_schema(       
+    method='get',
+    operation_description="Get user profile image"
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profile_image(request): 
+    user = Token.objects.get(key=request.auth.key).user
+    if user:
+        image_data = None
+        with user.file.open(mode = 'rb') as image_file:
+            image_data = base64.b64encode(image_file.read()).decode('utf-8')
+        user_data = {
+            'image' : image_data
+        }
+        return Response(user_data, status=status.HTTP_200_OK)
     return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
 
 @swagger_auto_schema(

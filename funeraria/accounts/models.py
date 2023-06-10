@@ -1,3 +1,4 @@
+from io import BytesIO
 import logging
 import os
 from django.conf import settings
@@ -7,7 +8,8 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django_currentuser.db.models import CurrentUserField
-
+from PIL import Image
+from django.core.files.base import ContentFile
 from groups.models import Group
 logger = logging.getLogger(__name__)
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
@@ -20,8 +22,6 @@ def get_upload_path(instance, filename):
     # Customize the upload path and filename if needed
     folder_path = 'accounts/' + instance.username
     full_path = os.path.join(folder_path, instance.username + "_picture.jpg")
-    logger.info(full_path)
-    # If a file with the same name already exists, delete it
      # Remove the existing image file if it exists
     if os.path.exists(full_path):
         os.remove(full_path)
@@ -50,5 +50,21 @@ class User(AbstractUser):
             if old_instance.file != self.file:
                 # Delete the previous image file
                 old_instance.file.delete(False)
+            try:
+                img = Image.open(self.file)
+                new_size = (800, 600)
+                img.thumbnail(new_size)
+                # Create a new file buffer to save the optimized image
+                new_image_buffer = BytesIO()
+                img.save(new_image_buffer, format='JPEG', optimize=True)
+                # Create a ContentFile from the buffer
+                optimized_image = ContentFile(new_image_buffer.getvalue(),self.username + "_picture")
+                # Close the Pillow image
+                img.close()
+                self.file = optimized_image
+            except Exception as e:
+                logger.info("save image error")
+                logger.info(e)
+            
         super().save(*args, **kwargs)
     
