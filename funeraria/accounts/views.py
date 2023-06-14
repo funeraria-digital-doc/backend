@@ -15,8 +15,8 @@ from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
 import json
 import logging
-from django.core.files.storage import FileSystemStorage
 from django.core.serializers.json import DjangoJSONEncoder
+from groups.models import Group
 from funeraria.permissions import IsAdmin, IsSuperUser, isEqualOrUpperPermission
 import base64
 logger = logging.getLogger(__name__)
@@ -350,7 +350,19 @@ def list_active_users(request):
 @permission_classes([IsAdmin])
 def list_all_users(request): 
     users = User.objects.all().values()
+    userData = list()
+    for user in users:
+        group = Group.objects.get(pk=user['group_user_id']) if user['group_user_id'] is not None else None
+        userData.append({
+            'id': user['id'],
+            'is_superuser': user['is_superuser'],
+            'username': user['username'],
+            'email': user['email'],
+            'is_staff': user['is_staff'],
+            'group' : group.name if group is not None else None,
+            'status': dict(User.Status.choices).get(user["status"]) if user["status"] is not None else None
+
+        })
     if users is None:
         return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
-    return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   
-    
+    return Response({"users" : userData, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   
