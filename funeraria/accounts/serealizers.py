@@ -3,6 +3,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework.validators import UniqueValidator
 from accounts.models import User
+from groups.models import Group
+import logging
+logger = logging.getLogger(__name__)
 class RegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(style={'input_type': 'password'}, write_only=True)
     class Meta:
@@ -74,6 +77,43 @@ class ProfilePictureUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['file']
+
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True,validators=[UniqueValidator(queryset=User.objects.all())])
+    username = serializers.CharField(required=True,validators=[UniqueValidator(queryset=User.objects.all())])
+    status = serializers.ChoiceField(required=False, choices=User.Status.choices, default=User.Status.ACTIVE)
+    is_staff = serializers.BooleanField(required=False)
+    is_superuser = serializers.BooleanField(required=False)
+    group_user = serializers.PrimaryKeyRelatedField(required = False, allow_null = True , queryset = Group.objects.all()) 
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user']
+
+class EditUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=False)
+    username = serializers.CharField(required=False)
+    status = serializers.ChoiceField(required=False, choices=User.Status.choices)
+    is_staff = serializers.BooleanField(required=False)
+    is_superuser = serializers.BooleanField(required=False)
+    group_user = serializers.PrimaryKeyRelatedField(required = False, allow_null = True , queryset = Group.objects.all()) 
+    class Meta:
+        model = User
+        fields = ('id','username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user')
+        #read_only_fields = ['id']
+    def validate(self, data):
+        data_dict = dict(data)
+        data_keys = data.keys()
+        logger.info(data_dict)
+        logger.info(data_keys)
+        request = self.instance
+        logger.info(request)
+        if 'username' in data_keys:
+            logger.info(data_dict['username'])
+        return data
+    
+
+        
         
     
     

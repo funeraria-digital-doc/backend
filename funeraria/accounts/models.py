@@ -43,7 +43,7 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         # Check if the instance already exists in the database
-        if self.pk:
+        if self.pk and self.file:
             # Retrieve the existing instance from the database
             old_instance = User.objects.get(pk=self.pk)
             # Check if the image field has changed

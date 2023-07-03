@@ -31,15 +31,17 @@ def create(request, *args, **kwargs):
                     'name' : serializer.instance.name
                 })
                 group['msg']  = "Group created successfully"
+                return Response(group, status = status.HTTP_200_OK)
             except Exception as e:
                 group['error']   = serializer.errors
-                return Response(group, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
+                return Response(group, status=status.HTTP_400_BAD_REQUEST)            
         else: 
             group['error'] = serializer.errors
+            return Response(group, status = status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         group['error']   = "erro no is_valid"
         #raise serializer.errors
-    return Response({'message' : group}, status = status.HTTP_200_OK)
+    return Response(group, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method='get',
@@ -73,16 +75,19 @@ def update(request, *args, **kwargs):
         return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
 
 @swagger_auto_schema(
-    method='delete',
+    method='post',
     operation_description="Delete a group"
 ) 
-@api_view(['DELETE'])
+@api_view(['POST'])
 def remove(request, *args, **kwargs):
     group = Group.objects.filter(id=kwargs.get('pk')).first()
     if group is None:
         return Response({"error" : "Group does not exist!"},status=status.HTTP_404_NOT_FOUND)
-    group.delete()
-    return Response({"success" : "Group deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
+    try:
+        group.delete()
+    except Exception as e:
+        logger.info("Error deleting", e)
+    return Response({"success" : "Group deleted successfully!"}, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='get',

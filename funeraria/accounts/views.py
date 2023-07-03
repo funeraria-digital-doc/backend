@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 
-from accounts.serealizers import RegistrationSerializer,EditProfileSerializer, EditProfileAdminSerializer, ProfilePictureUploadSerializer
+from accounts.serealizers import RegistrationSerializer,EditProfileSerializer, EditProfileAdminSerializer, ProfilePictureUploadSerializer, CreateUserSerializer, EditUserSerializer
 from accounts.models import User
 from rest_framework.authtoken.models import Token
 
@@ -89,7 +89,8 @@ def change_password(request):
         try:
             user.save()
             return Response({'success': True},status=status.HTTP_200_OK) 
-        except:
+        except Exception as e:
+            logger.info(e)
             return Response('error changing password',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
             
 
@@ -147,7 +148,7 @@ def registration(request):
         account = serializer.save()
         
         data['response'] = "Registration Successful!"
-        data['username'] = account.username
+        data['name'] = account.username
         data['email'] = account.email
 
         token = Token.objects.get(user=account).key
@@ -168,7 +169,7 @@ def profile(request):
     if user:                
         user_data = {
             'id': user.id,
-            'username': user.username,
+            'name': user.username,
             'email': user.email,
             'user_permissions': user.get_user_permissions(),
             'group_permissions': user.get_group_permissions()
@@ -186,11 +187,16 @@ def profile_image(request):
     user = Token.objects.get(key=request.auth.key).user
     if user:
         image_data = None
-        with user.file.open(mode = 'rb') as image_file:
-            image_data = base64.b64encode(image_file.read()).decode('utf-8')
-        user_data = {
-            'image' : image_data
-        }
+        if user.file:
+            with user.file.open(mode = 'rb') as image_file:
+                image_data = base64.b64encode(image_file.read()).decode('utf-8')
+            user_data = {
+                'image' : image_data
+            }
+        else:
+            user_data = {
+                'image' : None
+            }
         return Response(user_data, status=status.HTTP_200_OK)
     return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
 
@@ -221,58 +227,6 @@ def edit_profile(request, *args, **kwargs):
         else:
             return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
     return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
-
-@swagger_auto_schema(
-    method='post',
-    request_body=RegistrationSerializer,
-    operation_description="Create a super user"
-)    
-@api_view(['POST'])
-#@parser_classes([MultiPartParser])
-@permission_classes([IsSuperUser])
-def create_superuser(request, *args, **kwargs):
-    serializer = RegistrationSerializer(data=request.data)
-    data = {}
-    if serializer.is_valid():
-        user = User.objects.create_superuser(
-            serializer.validated_data['username'], 
-            serializer.validated_data['email'], 
-            serializer.validated_data['password']
-        )
-        
-        data['response'] = "Registration Successful!"
-        data['username'] = user.username
-        data['email'] = user.email  
-        data['is_superuser'] = user.is_superuser  
-    else:
-        data = serializer.errors
-    
-    return Response(data, status=status.HTTP_201_CREATED)
-
-@swagger_auto_schema(
-    method='post',
-    request_body=RegistrationSerializer,
-    operation_description="Create a staff user"
-)    
-@api_view(['POST'])
-#@parser_classes([MultiPartParser])
-@permission_classes([IsAdmin])
-def create_staffuser(request, *args, **kwargs): 
-    serializer = RegistrationSerializer(data=request.data)
-    data = {}
-    if serializer.is_valid():
-        user = User.objects.create_user(serializer.validated_data['username'], serializer.validated_data['email'], serializer.validated_data['password'])  
-        user.is_staff=True 
-        user.save()
-        data['response'] = "Registration Successful!"
-        data['username'] = user.username
-        data['email'] = user.email  
-        data['is_superuser'] = user.is_superuser  
-        data['is_staff'] = user.is_staff  
-    else:
-        data = serializer.errors
-    
-    return Response(data, status=status.HTTP_201_CREATED)
 
 @swagger_auto_schema(       
     method='get',
@@ -316,19 +270,6 @@ def edit_profile_admin(request, *args, **kwargs):
             return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
     return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
 
-@swagger_auto_schema(
-    method='delete',
-    operation_description="Delete a user"
-) 
-@api_view(['DELETE'])
-@permission_classes([IsAdmin])
-def remove(request, *args, **kwargs):
-    user = User.objects.filter(id=kwargs.get('pk')).first()
-    if user is None:
-        return Response({"error" : "User does not exist!"},status=status.HTTP_404_NOT_FOUND)
-    user.delete()
-    return Response({"success" : "User deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)   
-
 
 @swagger_auto_schema(       
     method='get',
@@ -359,10 +300,99 @@ def list_all_users(request):
             'username': user['username'],
             'email': user['email'],
             'is_staff': user['is_staff'],
-            'group' : group.name if group is not None else None,
-            'status': dict(User.Status.choices).get(user["status"]) if user["status"] is not None else None
-
+            'group' : group.id if group is not None else None,
+            #'status': dict(User.Status.choices).get(user["status"]) if user["status"] is not None else None
+            'status': user["status"]
         })
     if users is None:
         return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
     return Response({"users" : userData, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   
+
+
+@swagger_auto_schema(
+    method='post',
+    request_body=CreateUserSerializer,
+    operation_description="Create a User"
+)    
+@api_view(['POST'])
+#@parser_classes([MultiPartParser])
+@permission_classes([IsAdmin])
+def create_new_user(request, *args, **kwargs): 
+    serializer = CreateUserSerializer(data=request.data)
+    data = {}
+    if serializer.is_valid():
+        logger.info(serializer.validated_data)
+        try:
+            user = User.objects.create_user(
+                username = serializer.validated_data['username'], 
+                email = serializer.validated_data['email'],
+                is_superuser = serializer.validated_data['is_superuser'],
+                is_staff = serializer.validated_data['is_staff'],
+                status = serializer.validated_data['status'] if serializer.validated_data['status'] else User.Status.ACTIVE,
+                group_user = serializer.validated_data['group_user'] if 'group_user' in serializer.validated_data else None,
+                password = '12345678'
+            ) 
+            data['response'] = "Registration Successful!"
+            data['id'] = user.id
+            data['username'] = user.username
+            data['email'] = user.email  
+            data['is_superuser'] = user.is_superuser
+            data['is_staff'] = user.is_staff
+            data['status'] = user.status
+            data['group'] = user.group_user.id if user.group_user is not None else None
+            return Response(data, status=status.HTTP_201_CREATED)
+        except Exception as error:
+            logger.info(error)
+            return Response({'erro' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+    else:
+        data = serializer.errors
+        logger.info(data)
+        return Response({'erro' : data}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
+    
+@swagger_auto_schema(
+    method='post',
+    operation_description="Delete a user"
+) 
+@api_view(['POST'])
+def remove(request, *args, **kwargs):
+    user = User.objects.filter(id=kwargs.get('pk')).first()
+    if user is None:
+        return Response({"error" : "User does not exist!"},status=status.HTTP_404_NOT_FOUND)
+    try:
+        user.delete()
+    except Exception as e:
+        logger.info("Error deleting", e)
+    return Response({"success" : "User deleted successfully!"}, status=status.HTTP_200_OK)
+    
+    
+
+@swagger_auto_schema(
+    method='post',
+    request_body=EditUserSerializer,
+    operation_description="Edit a User "
+)    
+@api_view(['POST'])
+#@parser_classes([MultiPartParser])
+#@permission_classes([isEqualOrUpperPermission])
+def edit_user(request, *args, **kwargs):
+    user = User.objects.filter(id=kwargs['pk']).first()
+    if user is not None:
+        serializer = EditUserSerializer(data = request.data, partial=True)   
+        if serializer.is_valid():
+            try:            
+                serializer.update(instance = user, validated_data=serializer.validated_data)
+                newUser = User.objects.filter(id=kwargs['pk']).first()
+                response = {}
+                response['id'] = newUser.id
+                response['is_superuser'] = newUser.is_superuser
+                response['username'] = newUser.username
+                response['email'] = newUser.email
+                response['is_staff'] = newUser.is_staff
+                response['status'] = newUser.status
+                response['group'] = user.group_user.id if user.group_user is not None else None
+                return Response(response, status = status.HTTP_200_OK)
+            except:
+                return Response({'error' : "something went wrong updating user","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
+    return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
