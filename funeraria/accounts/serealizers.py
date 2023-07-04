@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.validators import UniqueValidator
 from accounts.models import User
 from groups.models import Group
+from django.forms import ValidationError
 import logging
 logger = logging.getLogger(__name__)
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -91,6 +92,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         fields = ['username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user']
 
 class EditUserSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=True)
     email = serializers.EmailField(required=False)
     username = serializers.CharField(required=False)
     status = serializers.ChoiceField(required=False, choices=User.Status.choices)
@@ -100,16 +102,33 @@ class EditUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id','username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user')
-        #read_only_fields = ['id']
+        read_only_fields = ['id']
     def validate(self, data):
         data_dict = dict(data)
-        data_keys = data.keys()
-        logger.info(data_dict)
-        logger.info(data_keys)
-        request = self.instance
-        logger.info(request)
-        if 'username' in data_keys:
-            logger.info(data_dict['username'])
+        validation_errors = {}
+        if data_dict.get('id') is not None:
+            user = User.objects.filter(id=data_dict.get('id')).first()
+            if user is not None:
+                if data_dict['username'] != user.username:
+                    if User.objects.filter(username=data_dict['username'] ).first() is not None:
+                        validation_errors['username'] = ['Nome de Utilizador tem de ser único.']
+                    if data_dict['username'] < 4: 
+                        validation_errors['username'] = ['Nome de Utilizador tem de ter pelo menos 4 caracteres.']
+                    if data_dict['username'] > 128: 
+                        validation_errors['username'] = ['Nome de Utilizador não pode ter mais que 128 caracteres.']
+                if data_dict['email'] != user.email:
+                    if User.objects.filter(email=data_dict['email'] ).first() is not None:
+                        validation_errors['email'] = ['Email tem de ser único.']
+                if not data_dict['is_staff'] and not data_dict['is_superuser'] and data_dict['group_user'] is None :
+                    validation_errors['group'] = ['Campo funerária é obrigatório']
+            else: 
+                validation_errors['utilizador'] = ['Utilizador não encontrado']
+        else : 
+            validation_errors['utilizador'] = ['Utilizador não encontrado']
+        if validation_errors:
+            logger.info('---')
+            logger.info(validation_errors)
+            raise ValidationError(validation_errors)
         return data
     
 
