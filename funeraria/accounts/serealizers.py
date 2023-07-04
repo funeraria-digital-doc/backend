@@ -126,8 +126,6 @@ class EditUserSerializer(serializers.ModelSerializer):
         else : 
             validation_errors['utilizador'] = ['Utilizador não encontrado']
         if validation_errors:
-            logger.info('---')
-            logger.info(validation_errors)
             raise ValidationError(validation_errors)
         return data
     
