@@ -27,7 +27,8 @@ from rest_framework.decorators import parser_classes
 import json
 from rest_framework.authtoken.models import Token
 from docx import Document
-
+import logging
+logger = logging.getLogger(__name__)
 @swagger_auto_schema(
     method='get',
     operation_description="List all templates"
@@ -35,9 +36,9 @@ from docx import Document
 @api_view(['GET'])
 def list_templates(request):
     templates = TemplateLogic.objects.all().values()
-    if(templates.count() > 0):
+    if(templates is not None):
         return Response({'data' : templates}, status=status.HTTP_200_OK)
-    return Response({'error' : 'No templates available'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error' : 'No templates available'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method='get',
@@ -54,41 +55,57 @@ def get_variables(request, *args, **kwargs):
 
 @swagger_auto_schema(
     method='post',
+    operation_description="Get all variables from a file"
+) 
+@api_view(['POST'])
+#@permission_classes([IsAuthenticated])
+def get_variables_from_file(request, *args, **kwargs):
+    file = request.FILES.get('file')
+    if file:
+        doc = DocxTemplate(file)
+        variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
+        return Response({'success': True, 'variables':variables}, status = status.HTTP_200_OK)
+    else:
+        return Response({'success': False,'error' : 'No file provided'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@swagger_auto_schema(
+    method='post',
     request_body=UploadSerializer,
     operation_description="Upload a document template"
 )    
 @api_view(['POST'])
-@parser_classes([MultiPartParser])
+# @parser_classes([MultiPartParser])
 def upload(request):
-    dup = hasDuplicates(request.POST.get('validations'))
+    logger.info('entra')
+    dup = hasDuplicates(json.loads(request.data.get('validations')) if request.data.get('validations') is not None else [])
     if dup:
         return dup
     data = {
-        'title' : request.POST.get('title'),
-        'group' : request.POST.get('group'),
-        'file' : request.FILES.get('file'),
-        'validations' : json.loads(request.POST.get('validations')),
-        'send_type' : json.loads(request.POST.get('send_type')),
-        'send_email_to' : json.loads(request.POST.get('send_email_to')) if request.POST.get('send_email_to') else [],
-        'send_email_to_cc' : json.loads(request.POST.get('send_email_to_cc')) if request.POST.get('send_email_to_cc') else [],
-        'send_email_to_bcc' : json.loads(request.POST.get('send_email_to_bcc')) if request.POST.get('send_email_to_bcc') else [],
+        'title' : request.data.get('title'),
+        'group' : request.data.get('group'),
+        'file' : request.data.get('file'),
+        'validations' : json.loads(request.data.get('validations')) if request.data.get('validations') is not None else [],
+        'send_type' : request.data.get('send_type') if request.data.get('send_type') is not None else 'NONE',
+        'send_email_to' : json.loads(request.data.get('send_email_to')) if request.data.get('send_email_to') else [],
+        'send_email_to_cc' : json.loads(request.data.get('send_email_to_cc')) if request.data.get('send_email_to_cc') else [],
+        'send_email_to_bcc' : json.loads(request.data.get('send_email_to_bcc')) if request.data.get('send_email_to_bcc') else [],
     }
     form = UploadSerializer(data = data)
     if form.is_valid():
         try:
-            if data['file']:
-                myfile = data['file']
-                fs = FileSystemStorage()
-                if fs.exists(myfile.name):
-                    return Response({'error' : 'File name already exists!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                try:
-                    form.save()
-                    return Response({'data' : form.data}, status=status.HTTP_200_OK)
-                except Exception as e:
-                     print(e)
-                     return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                return Response("no valid 2", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # if data['file']:
+            #     myfile = data['file']
+            #     fs = FileSystemStorage()
+            #     if fs.exists(myfile.name):
+            #         return Response({'error' : 'File name already exists!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # else:
+            #     return Response("no file", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            try:
+                form.save()
+                return Response({'data' : form.data}, status=status.HTTP_200_OK)
+            except Exception as e:
+                    logger.info(e)
+                    return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
@@ -268,37 +285,38 @@ def getDbKeysToDoc(request, template, template_validations, changeVariablesObjec
                 keys_missing.append(key)
 
 @swagger_auto_schema(
-    method='patch',
+    method='post',
     request_body=EditUploadSerializer,
     operation_description="Edit a template"
 )    
-@api_view(['PATCH'])
-@parser_classes([MultiPartParser])
+@api_view(['POST'])
+#@parser_classes([MultiPartParser])
 def edit(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(pk=kwargs.get('pk')).first()  
-    dup = hasDuplicates(request.POST.get('validations'))
+    dup = hasDuplicates(request.data.get('validations'))
     if dup:
         return dup
-    if not request.POST and not request.FILES:
+    #if not request.POST and not request.FILES:
+    if not request.data:
         return Response({"error" : "no data sent"}, status = status.HTTP_400_BAD_REQUEST)
     data = {}
-    if request.POST.get('title'):
-        data['title'] = request.POST.get('title')
-    if request.POST.get('group'):
-        data['group'] = request.POST.get('group')
-    if request.FILES.get('file'):
-        data['file'] = request.FILES.get('file')
-    if request.POST.get('validations'):
-        data['validations'] = json.loads(request.POST.get('validations'))
-    if request.POST.get('send_type'):
-        data['send_type'] = json.loads(request.POST.get('send_type'))
-    if request.POST.get('send_email_to'):
-        data['send_email_to'] = json.loads(request.POST.get('send_email_to'))
-    if request.POST.get('send_email_to_cc'):
-        data['send_email_to_cc'] = json.loads(request.POST.get('send_email_to_cc'))
-    if request.POST.get('send_email_to_bcc'):
-        data['send_email_to_bcc'] = json.loads(request.POST.get('send_email_to_bcc'))
-    serializer = EditUploadSerializer(data = data,instance=template, partial=True)   
+    if request.data.get('title'):
+        data['title'] = request.data.get('title')
+    if request.data.get('group'):
+        data['group'] = request.data.get('group')
+    if request.data.get('file'):
+        data['file'] = request.data.get('file')
+    if request.data.get('validations'):
+        data['validations'] = request.data.get('validations') if request.data.get('validations') is not None else []
+    if request.data.get('send_type'):
+        data['send_type'] = request.data.get('send_type') if request.data.get('send_type') is not None else []
+    if request.data.get('send_email_to'):
+        data['send_email_to'] = request.data.get('send_email_to') if request.data.get('send_email_to') is not None else []
+    if request.data.get('send_email_to_cc'):
+        data['send_email_to_cc'] = request.data.get('send_email_to_cc') if request.data.get('send_email_to_cc') is not None else []
+    if request.data.get('send_email_to_bcc'):
+        data['send_email_to_bcc'] = request.data.get('send_email_to_bcc') if request.data.get('send_email_to_bcc') is not None else []
+    serializer = EditUploadSerializer(data = data,instance=template, partial=True)  
     if serializer.is_valid():
         if template is None:
                 return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
@@ -308,7 +326,9 @@ def edit(request, *args, **kwargs):
         except:
             return Response({'error' : "something went wrong updating template","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
-        return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
+        logger.info('dá erro depois')
+        logger.info(serializer.errors)
+        return Response({'error' : json.dumps(serializer.errors)}, status = status.HTTP_400_BAD_REQUEST)   
     
 
 @swagger_auto_schema(
@@ -408,6 +428,18 @@ def list_group_templates(request):
     return Response({'error' : 'Invalid user'}, status=status.HTTP_400_BAD_REQUEST)
 
 def hasDuplicates(validations):
+    seen = set()
+    duplicatedKeys = []
+    logger.info('validation')
+    logger.info(type(validations) )
+    for validation in validations:
+       
+        if validation['name'] not in seen:
+            duplicatedKeys.append(validation['name'])
+            seen.add(validation['name'])
+        else:
+            return Response({"errors" : {'validations' : "Duplicate keys in validations field", 'keys' : duplicatedKeys}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return False
     decoder = json.JSONDecoder(object_pairs_hook=parse_object_pairs)
     if validations:
         obj = decoder.decode(validations)

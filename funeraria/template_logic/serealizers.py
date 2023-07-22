@@ -1,17 +1,14 @@
-from collections import OrderedDict
-import json
 from django.forms import ValidationError
 from rest_framework import serializers
 from accounts.models import User
 from groups.models import Group
 from records.models import Record
 from template_logic.models import TemplateLogic
-from docxtpl import DocxTemplate
-from json import JSONDecoder
 
 from template_logic.validation_helper import run_template_validations
 
-
+import logging
+logger = logging.getLogger(__name__)
 
 FIELD_TYPE_CHOICES =(
     ("BOOLEAN",'BOOLEAN'), 
@@ -183,12 +180,12 @@ class UploadSerializer(serializers.ModelSerializer):
             fields = ['name', 'optional', 'options', 'field_type', 'placeholder','format','label']
     title = serializers.CharField(required = True, max_length = 256)
     group = serializers.PrimaryKeyRelatedField(required = True, queryset = Group.objects.all())
-    validations = serializers.DictField(allow_empty=True, child = ValidationsSerializer())
+    validations = serializers.ListField(allow_empty=True, child = ValidationsSerializer())
     send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES)
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
-
+    file = serializers.CharField(required = False,allow_null = True, max_length = 100000)
 
     def validate(self,data):
         data_dict = dict(data)
@@ -204,9 +201,11 @@ class UploadSerializer(serializers.ModelSerializer):
             raise ValidationError(validation_errors)
         return data
         
+  
     class Meta:
         model = TemplateLogic
-        fields = ['title','file','group','slug','validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
+        #
+        fields = ['title','file','group','validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
         validators = [
             serializers.UniqueTogetherValidator(
                 queryset=model.objects.all(),
@@ -216,8 +215,7 @@ class UploadSerializer(serializers.ModelSerializer):
         ]
 
 
-class EditUploadSerializer(serializers.ModelSerializer):
-
+class EditUploadSerializer(serializers.ModelSerializer):    
     class ValidationsSerializer(serializers.Serializer):
         class OptionsSerializer(serializers.Serializer):
             class OptionSerializer(serializers.Serializer):
@@ -321,12 +319,12 @@ class EditUploadSerializer(serializers.ModelSerializer):
             fields = ['name', 'optional', 'options', 'field_type', 'placeholder','format','label']
     title = serializers.CharField(required = False,allow_null = True, max_length = 256)
     group = serializers.PrimaryKeyRelatedField(required = False, allow_null = True, queryset = Group.objects.all())
-    validations = serializers.DictField(allow_empty=True, child = ValidationsSerializer())
+    validations = serializers.ListField(allow_empty=True, child = ValidationsSerializer())
     send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, allow_null = True)
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
-
+    file = serializers.CharField(required = False,allow_null = True, max_length = 100000)
 
     def validate(self,data):
         data_dict = dict(data)
@@ -345,7 +343,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
         
     class Meta:
         model = TemplateLogic
-        fields = ['title','file','group','slug','validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
+        fields = ['title','file','group','validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
         validators = [
             serializers.UniqueTogetherValidator(
                 queryset=model.objects.all(),
