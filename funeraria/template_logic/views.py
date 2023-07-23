@@ -76,30 +76,22 @@ def get_variables_from_file(request, *args, **kwargs):
 @api_view(['POST'])
 # @parser_classes([MultiPartParser])
 def upload(request):
-    logger.info('entra')
-    dup = hasDuplicates(json.loads(request.data.get('validations')) if request.data.get('validations') is not None else [])
+    dup = hasDuplicates(request.data.get('validations') if request.data.get('validations') is not None else [])
     if dup:
         return dup
     data = {
         'title' : request.data.get('title'),
-        'group' : request.data.get('group'),
+        'group' : request.data.get('group_id'),
         'file' : request.data.get('file'),
-        'validations' : json.loads(request.data.get('validations')) if request.data.get('validations') is not None else [],
+        'validations' : request.data.get('validations') if request.data.get('validations') is not None else [],
         'send_type' : request.data.get('send_type') if request.data.get('send_type') is not None else 'NONE',
-        'send_email_to' : json.loads(request.data.get('send_email_to')) if request.data.get('send_email_to') else [],
-        'send_email_to_cc' : json.loads(request.data.get('send_email_to_cc')) if request.data.get('send_email_to_cc') else [],
-        'send_email_to_bcc' : json.loads(request.data.get('send_email_to_bcc')) if request.data.get('send_email_to_bcc') else [],
+        'send_email_to' : request.data.get('send_email_to') if request.data.get('send_email_to') else [],
+        'send_email_to_cc' : request.data.get('send_email_to_cc') if request.data.get('send_email_to_cc') else [],
+        'send_email_to_bcc' : request.data.get('send_email_to_bcc') if request.data.get('send_email_to_bcc') else [],
     }
     form = UploadSerializer(data = data)
     if form.is_valid():
         try:
-            # if data['file']:
-            #     myfile = data['file']
-            #     fs = FileSystemStorage()
-            #     if fs.exists(myfile.name):
-            #         return Response({'error' : 'File name already exists!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            # else:
-            #     return Response("no file", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             try:
                 form.save()
                 return Response({'data' : form.data}, status=status.HTTP_200_OK)
@@ -109,6 +101,7 @@ def upload(request):
         except Exception as e:
             return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
+        logger.info(form.errors)
         return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(       
@@ -302,8 +295,8 @@ def edit(request, *args, **kwargs):
     data = {}
     if request.data.get('title'):
         data['title'] = request.data.get('title')
-    if request.data.get('group'):
-        data['group'] = request.data.get('group')
+    if request.data.get('group_id'):
+        data['group'] = request.data.get('group_id')
     if request.data.get('file'):
         data['file'] = request.data.get('file')
     if request.data.get('validations'):
@@ -326,7 +319,6 @@ def edit(request, *args, **kwargs):
         except:
             return Response({'error' : "something went wrong updating template","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
-        logger.info('dá erro depois')
         logger.info(serializer.errors)
         return Response({'error' : json.dumps(serializer.errors)}, status = status.HTTP_400_BAD_REQUEST)   
     
@@ -430,8 +422,6 @@ def list_group_templates(request):
 def hasDuplicates(validations):
     seen = set()
     duplicatedKeys = []
-    logger.info('validation')
-    logger.info(type(validations) )
     for validation in validations:
        
         if validation['name'] not in seen:
@@ -439,18 +429,6 @@ def hasDuplicates(validations):
             seen.add(validation['name'])
         else:
             return Response({"errors" : {'validations' : "Duplicate keys in validations field", 'keys' : duplicatedKeys}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return False
-    decoder = json.JSONDecoder(object_pairs_hook=parse_object_pairs)
-    if validations:
-        obj = decoder.decode(validations)
-        keys = []
-        seen = set()
-        for key, value in obj:
-            if key not in seen:
-                keys.append(key)
-                seen.add(key)
-            else:
-                return Response({"errors" : {'validations' : "Duplicate keys in validations field", 'keys' : keys}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return False
 
 def parse_object_pairs(pairs):
