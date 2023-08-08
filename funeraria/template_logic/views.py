@@ -1,3 +1,4 @@
+import base64
 import io
 import os
 from django.http import HttpResponse
@@ -28,6 +29,10 @@ import json
 from rest_framework.authtoken.models import Token
 from docx import Document
 import logging
+from PIL import Image
+from django.core.files.base import ContentFile
+import tempfile
+from django.http import FileResponse
 logger = logging.getLogger(__name__)
 @swagger_auto_schema(
     method='get',
@@ -35,10 +40,15 @@ logger = logging.getLogger(__name__)
 ) 
 @api_view(['GET'])
 def list_templates(request):
-    templates = TemplateLogic.objects.all().values()
-    if(templates is not None):
-        return Response({'data' : templates}, status=status.HTTP_200_OK)
-    return Response({'error' : 'No templates available'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    try:
+        templates = TemplateLogic.objects.all().values('id','title', 'group_id','send_type','file')
+        for template in templates:
+            template['file'] = bool(template['file'])
+        if(templates is not None):
+            return Response({'data' : templates}, status=status.HTTP_200_OK)
+        return Response({'error' : 'No templates available'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        return Response({'error' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method='get',
@@ -105,14 +115,14 @@ def upload(request):
         return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(       
-    method='patch',
+    method='post',
     operation_description="Edit template variables",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties= {'variable_old': openapi.Schema(title="variable_new",type=openapi.TYPE_STRING)},
     ),
 )
-@api_view(['PATCH'])
+@api_view(['POST'])
 @parser_classes([JSONParser])
 def edit_variables(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values().first()
@@ -253,7 +263,20 @@ def download(request, *args, **kwargs):
         return doc_response
     return Response({'errors' : "Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
-
+@swagger_auto_schema(
+    method='get',
+    operation_description="Download a Template with all replaced variables from a registered death"
+) 
+@api_view(['GET'])
+def template_download(request, *args, **kwargs):
+    template_file = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('file').first()
+    try:
+        if not template_file:
+            return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
+        return Response({'data': template_file.get('file')}, status=status.HTTP_200_OK)
+    except Exception as error:
+        logger.info(error)
+        return Response({'error': 'Error downloading'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record):
     for variable in doc_variables['vars']:
@@ -324,10 +347,10 @@ def edit(request, *args, **kwargs):
     
 
 @swagger_auto_schema(
-    method='delete',
+    method='post',
     operation_description="Delete a Template"
 ) 
-@api_view(['DELETE'])
+@api_view(['POST'])
 def remove(request, *args, **kwargs):   
     template = TemplateLogic.objects.filter(id=kwargs.get('pk')).first()
     if template is None:

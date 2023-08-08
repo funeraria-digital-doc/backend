@@ -48,8 +48,8 @@ def login(request):
                     'name': user.username,
                     'email': user.email,
                     'token' : str(token[0]),
-                    'user_permissions': user.get_user_permissions(),
-                    'group_permissions': user.get_group_permissions()
+                    #'user_permissions': user.get_user_permissions(),
+                    #'group_permissions': user.get_group_permissions()
                 }
                 return Response(data,status=status.HTTP_200_OK) 
             else :
@@ -171,8 +171,8 @@ def profile(request):
             'id': user.id,
             'name': user.username,
             'email': user.email,
-            'user_permissions': user.get_user_permissions(),
-            'group_permissions': user.get_group_permissions()
+            #'user_permissions': user.get_user_permissions(),
+            #'group_permissions': user.get_group_permissions()
         }
         return Response(user_data, status=status.HTTP_200_OK)
     return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
@@ -242,8 +242,8 @@ def profile_admin(request, *args, **kwargs):
             'email': user.email,
             'is_staff': user.is_staff,
             'is_superuser': user.is_superuser,
-            'user_permissions': user.get_user_permissions(),
-            'group_permissions': user.get_group_permissions()
+            # 'user_permissions': user.get_user_permissions(),
+            # 'group_permissions': user.get_group_permissions()
         }
         return Response(data, status=status.HTTP_200_OK)
     return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)

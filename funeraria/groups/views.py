@@ -95,7 +95,7 @@ def remove(request, *args, **kwargs):
 ) 
 @api_view(['GET'])
 def list(request, *args, **kwargs):
-    groups = Group.objects.all().values()
+    groups = Group.objects.all().values('id','name')
     return Response(groups, status = status.HTTP_200_OK)
 
 

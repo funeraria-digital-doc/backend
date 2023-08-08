@@ -9,6 +9,7 @@ urlpatterns = [
     path('list-group-templates/', views.list_group_templates, name='list_group_templates'),
     path('upload/', views.upload, name='upload'),
     path('get-variables-from-file/', views.get_variables_from_file, name='get_variables_from_file'),
+    path('<template_pk>/download/', views.template_download, name='template_download'),
     path('<template_pk>/download/<record_pk>/', views.download, name='download'),
     path('edit/<pk>/', views.edit, name='edit'),
     path('remove/<pk>/', views.remove, name='remove'),

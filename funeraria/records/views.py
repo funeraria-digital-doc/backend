@@ -11,6 +11,8 @@ from records.serealizers import RecordCreateSerializer, RecordUpdateSerializer
 
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import  JSONParser
+import logging
+logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
     method='post',
@@ -18,14 +20,12 @@ from rest_framework.parsers import  JSONParser
     operation_description="Create a new Record"
 )    
 @api_view(['POST'])
-@parser_classes([MultiPartParser])
+#@parser_classes([MultiPartParser])
 def create(request, *args, **kwargs):
     record = {}
-    for requestPart in request.POST:
-        record[requestPart] = request.POST.get(requestPart)
-    for requestFile in request.FILES:
-        record[requestFile] = request.FILES.get(requestFile)
-       
+    for requestPart in request.data:
+        record[requestPart] = request.data.get(requestPart)
+    logger.info(record)
     serializer = RecordCreateSerializer(data=record)
     finalRecord = {}
     try:
@@ -33,19 +33,17 @@ def create(request, *args, **kwargs):
             try:
                 serializer.save()
                 finalRecord['record']  = serializer.data
-                finalRecord['msg']  = "Record created successfully"
             except Exception as e:
                 print(e)
-                if serializer.data['photo'] is not None and serializer.data['photo'] == record['photo']:
-                    record
                 finalRecord['error']   = serializer.errors
                 return Response(finalRecord, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
         else: 
             finalRecord['error'] = serializer.errors
+            return Response(finalRecord, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
     except Exception as e:
         finalRecord['error']   = "erro no is_valid"
         #raise serializer.errors
-    return Response({'record' : finalRecord}, status = status.HTTP_200_OK)
+    return Response(finalRecord, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='get',
@@ -64,7 +62,7 @@ def view(request, *args, **kwargs):
     operation_description="Update a Record"
 )    
 @api_view(['POST'])
-@parser_classes([MultiPartParser])
+# @parser_classes([MultiPartParser])
 def update(request, *args, **kwargs):
     recordInstance = Record.objects.filter(pk=kwargs.get('pk')).first() 
     record = {}
@@ -85,10 +83,10 @@ def update(request, *args, **kwargs):
         return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
 
 @swagger_auto_schema(
-    method='delete',
+    method='post',
     operation_description="Delete a record"
 ) 
-@api_view(['DELETE'])
+@api_view(['POST'])
 def remove(request, *args, **kwargs):
     record = Record.objects.filter(id=kwargs.get('pk')).first()
     if record is None:

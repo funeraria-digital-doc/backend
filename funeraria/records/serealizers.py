@@ -1,18 +1,36 @@
-from django.forms import CharField
 from rest_framework import serializers
-from accounts.serealizers import UserSerializer
 from records.models import Record
 from rest_framework.validators import UniqueValidator
-from rest_framework.validators import UniqueTogetherValidator
 from rest_framework import serializers
 
-class RecordSerializer(serializers.ModelSerializer):
-    # group_user = UserSerializer(many=True)
-    class Meta:
-        model = Record
-        fields = '__all__'
+
+GENDER_CHOICES = (
+    ("WOMAN",'Woman'),
+    ("MALE",'Man'),
+    ("OTHER",'Other')
+)
+
+MARITAL_STATUS_CHOICES = (
+    ("SINGLE",'Single'),
+    ("MARIED",'Maried'),
+    ("DIVORCED",'Divorced'),
+    ("WIDOWER",'Widower')
+)
+
+STATUS_CHOICES = (
+    ("INACTIVE",'Inactive'),
+    ("ACTIVE",'Active'),
+    ("PENDING",'Pending'),
+    ("COMPLETED",'Completed'),
+    ("ARCHIVED",'Archived')
+)
 
 class RecordCreateSerializer(serializers.ModelSerializer):
+
+    gender = serializers.ChoiceField(choices = GENDER_CHOICES)
+    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES)
+    marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES)
+    status = serializers.ChoiceField(choices = STATUS_CHOICES)
     class Meta:
         model = Record
         fields = '__all__'
@@ -32,7 +50,10 @@ class RecordCreateSerializer(serializers.ModelSerializer):
 class RecordUpdateSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required = False)
     name = serializers.CharField(required = False)
-    gender = serializers.CharField(required = False)
+    gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False)
+    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False)
+    marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES, required = False)
+    status = serializers.ChoiceField(choices = STATUS_CHOICES, required = False)
     class Meta:
         model = Record
         fields = '__all__'
