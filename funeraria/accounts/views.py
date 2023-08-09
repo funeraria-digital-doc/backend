@@ -108,11 +108,9 @@ def change_password(request):
 @permission_classes([IsAuthenticated])
 def file_upload(request):
     data = {}
-    data['file'] = request.FILES.get('file')
-    #file = request.FILES.get('file')
+    data['file'] = request.data['file']
     user = request.user
     if not user:
-        # If we don't have a regular user, raise a ValidationError
         return Response('There is no user',status=status.HTTP_401_UNAUTHORIZED)
     serializer = ProfilePictureUploadSerializer(data = data,instance=user, partial=True)   
     if serializer.is_valid():
@@ -186,12 +184,9 @@ def profile(request):
 def profile_image(request): 
     user = Token.objects.get(key=request.auth.key).user
     if user:
-        image_data = None
         if user.file:
-            with user.file.open(mode = 'rb') as image_file:
-                image_data = base64.b64encode(image_file.read()).decode('utf-8')
             user_data = {
-                'image' : image_data
+                'image' : user.file
             }
         else:
             user_data = {
@@ -321,7 +316,6 @@ def create_new_user(request, *args, **kwargs):
     serializer = CreateUserSerializer(data=request.data)
     data = {}
     if serializer.is_valid():
-        logger.info(serializer.validated_data)
         try:
             user = User.objects.create_user(
                 username = serializer.validated_data['username'], 

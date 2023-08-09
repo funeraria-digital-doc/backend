@@ -63,17 +63,17 @@ class EditProfileAdminSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ProfilePictureUploadSerializer(serializers.ModelSerializer):
-    file = serializers.ImageField(required=True, allow_empty_file=False)
+    file = serializers.CharField(required=True)
 
-    def validate_file(self, value):
-        max_size = 5 * 1024 * 1024  # Maximum size in bytes (e.g., 5MB)
-        if value.size > max_size:
-            raise serializers.ValidationError("Picture size should not exceed 5MB.")
-        allowed_types = ['image/jpeg', 'image/png']
-        if value.content_type not in allowed_types:
-            raise serializers.ValidationError("Only JPEG and PNG image formats are allowed.")
+    # def validate_file(self, value):
+    #     max_size = 5 * 1024 * 1024  # Maximum size in bytes (e.g., 5MB)
+    #     if value.size > max_size:
+    #         raise serializers.ValidationError("Picture size should not exceed 5MB.")
+    #     allowed_types = ['image/jpeg', 'image/png']
+    #     if value.content_type not in allowed_types:
+    #         raise serializers.ValidationError("Only JPEG and PNG image formats are allowed.")
 
-        return value
+    #     return value
         
     class Meta:
         model = User
