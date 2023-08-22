@@ -5,13 +5,13 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
 from groups.models import Group
-from accounts.models import User
-
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
+from django.core.cache import cache
 logger = logging.getLogger(__name__)
+
 @swagger_auto_schema(
     method='post',
     request_body=GroupCreateSerializer,
@@ -95,6 +95,14 @@ def remove(request, *args, **kwargs):
 ) 
 @api_view(['GET'])
 def list(request, *args, **kwargs):
+    cache_key = 'all_groups'
+    groups = cache.get(cache_key)
+    if not groups:
+        logger.info('não tinha cache')
+        groups = Group.objects.all().values('id','name')
+        cache.set(cache_key, groups)
+    else:
+        cache.touch(cache_key)
     groups = Group.objects.all().values('id','name')
     return Response(groups, status = status.HTTP_200_OK)
 

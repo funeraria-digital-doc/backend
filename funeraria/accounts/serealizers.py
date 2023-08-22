@@ -7,31 +7,6 @@ from groups.models import Group
 from django.forms import ValidationError
 import logging
 logger = logging.getLogger(__name__)
-class RegistrationSerializer(serializers.ModelSerializer):
-    password_confirm = serializers.CharField(style={'input_type': 'password'}, write_only=True)
-    class Meta:
-        model = User
-        fields = ['username', 'email' ,'password', 'password_confirm']
-        extra_kwargs = {
-            'password' : {'write_only': True}
-        }
-    
-    def save(self):
-
-        password = self.validated_data['password']
-        password_confirm = self.validated_data['password_confirm']
-
-        if password != password_confirm:
-            raise serializers.ValidationError({'error': 'P1 and P2 should be same!'})
-
-        if User.objects.filter(email=self.validated_data['email']).exists():
-            raise serializers.ValidationError({'error': 'Email already exists!'})
-
-        account = User(email=self.validated_data['email'], username=self.validated_data['username'])
-        account.set_password(password)
-        account.save()
-
-        return account
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -54,13 +29,6 @@ class EditProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email']
-
-class EditProfileAdminSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(required=False,validators=[UniqueValidator(queryset=User.objects.all())])
-    password = serializers.CharField(required=False,validators=[UniqueValidator(queryset=User.objects.all())])
-    class Meta:
-        model = User
-        fields = '__all__'
 
 class ProfilePictureUploadSerializer(serializers.ModelSerializer):
     file = serializers.CharField(required=True)

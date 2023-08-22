@@ -1,24 +1,18 @@
-import base64
 import io
 import os
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.db.models import Case, When, Value, BooleanField, CharField
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from django.utils.decorators import method_decorator
 from rest_framework.permissions import IsAuthenticated
 from docxtpl import DocxTemplate
 from accounts.models import User
 from template_logic.serealizers import SEND_TYPE_CHOICES
-from template_logic.serealizers import DB_COLLECTION_CHOICES
 from template_logic.validation_helper import *
-from template_logic.variables import get_var_types
 from groups.models import Group
 from template_logic.serealizers import UploadSerializer, EditUploadSerializer
-from django.conf import settings
-from django.core.files.storage import FileSystemStorage
-from rest_framework import generics
 from template_logic.models import TemplateLogic
 from records.models import Record
 from drf_yasg import openapi
@@ -26,29 +20,38 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
 import json
-from rest_framework.authtoken.models import Token
-from docx import Document
 import logging
-from PIL import Image
-from django.core.files.base import ContentFile
-import tempfile
-from django.http import FileResponse
+
 logger = logging.getLogger(__name__)
+
 @swagger_auto_schema(
     method='get',
     operation_description="List all templates"
 ) 
 @api_view(['GET'])
 def list_templates(request):
+    from django.db.models import Q
     try:
-        templates = TemplateLogic.objects.all().values('id','title', 'group_id','send_type','file')
-        for template in templates:
-            template['file'] = bool(template['file'])
-        if(templates is not None):
-            return Response({'data' : templates}, status=status.HTTP_200_OK)
+    
+        #templates = TemplateLogic.objects.filter(file__exists=True, file__ne='').values('id', 'title', 'group_id', 'send_type', 'file')
+        templates = TemplateLogic.objects.annotate(
+            file_exists=Case(
+                When(Q(file__isnull=False) & ~Q(file=''), then=Value(True)),
+                default=Value(False),
+                output_field=CharField()
+            )
+        ).values('file_exists')
+        print(templates)
+        #results_list = [result.to_dict() for result in templates]
+        #logger.info(results_list)
+        # for template in templates:
+        #     template['file'] = bool(template['file'])
+        if templates:
+            return Response({'data' : json.dumps(templates)}, status=status.HTTP_200_OK)
         return Response({'error' : 'No templates available'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
-        return Response({'error' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.info(e)
+        return Response({'error' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method='get',
@@ -191,11 +194,7 @@ def download(request, *args, **kwargs):
     if record is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
     if request.data.get('to_send_option') not in dict(SEND_TYPE_CHOICES):
-        return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)
-    
-    
-        
-            
+        return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)   
     doc = {}
     doc_response = None
     if request.data.get('to_send_option') == "DOCUMENT" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
@@ -418,7 +417,6 @@ def get_template(request, *args, **kwargs):
 ) 
 @api_view(['GET'])
 def list_group_templates(request):
-    #user = Token.objects.get(key=request.auth.key).user
     if request.user is not None:
         user = User.objects.get(id=request.user.id)
         if (user.is_superuser or user.is_staff) and request.GET.get('group_id'):

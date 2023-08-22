@@ -3,15 +3,12 @@ version: '3.9'
 services:
   gcloud:
     image: google/cloud-sdk:433.0.0
-    #image: google/cloud-sdk:441.0.0
     volumes:
       - gcp-creds:/creds
       - .:/funeraria
     working_dir: /funeraria
     environment:
       - CLOUDSDK_CONFIG=/creds
-      #- GOOGLE_APPLICATION_CREDENTIALS=C:\Users\joaor\Downloads\funeraria-388607-1e7d5d425bc1.json
-    command: ["gcloud", "app", "deploy", "--project", "funeraria-388607"]
   
 volumes:
   gcp-creds:

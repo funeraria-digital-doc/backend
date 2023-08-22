@@ -1,7 +1,6 @@
 from rest_framework import permissions
-
+import logging 
 from accounts.models import User
-
 
 class IsAdmin(permissions.IsAdminUser):
 

@@ -246,3 +246,11 @@ LOGGING = {
         'level': 'INFO',  # Set the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     },
 }
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'funeraria',
+        'TIMEOUT': 600
+    }
+}
