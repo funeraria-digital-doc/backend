@@ -7,6 +7,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django_currentuser.db.models import CurrentUserField
 from groups.models import Group
+
 logger = logging.getLogger(__name__)
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_auth_token(sender, instance=None, created=False, **kwargs):
@@ -26,4 +27,14 @@ class User(AbstractUser):
     updated_by = CurrentUserField(related_name='account_updated_by',on_update=True)
     def __str__(self):
         return self.username
+    
+    def delete(self, *args, **kwargs):
+        from django.core.cache import cache
+        cache.delete('all_users')
+        super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        from django.core.cache import cache
+        cache.delete('all_users')
+        super().save(*args, **kwargs)
     

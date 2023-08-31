@@ -5,6 +5,7 @@ from django_currentuser.db.models import CurrentUserField
 from django.core.files.base import ContentFile
 from groups.models import Group
 import logging
+from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 class TemplateLogic(models.Model):
@@ -20,8 +21,17 @@ class TemplateLogic(models.Model):
     updated_by = CurrentUserField(related_name='template_updated_by',on_update=True) # type: ignore
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+    objects = models.DjongoManager()
 
     def __str__(self):
         return self.title
+
+    def delete(self, *args, **kwargs):
+        cache.delete('all_templates')
+        super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        cache.delete('all_templates')
+        super().save(*args, **kwargs)
 
 

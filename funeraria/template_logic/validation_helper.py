@@ -1,28 +1,30 @@
 from django.core.exceptions import ValidationError
+import logging
+logger = logging.getLogger(__name__)
 
 def required_or_override(data_keys, key, is_optional, is_field_custom, errors):
     if key not in data_keys and (not is_optional and is_field_custom):
-        errors[key] = "the field " + key + " is required"
+        errors[key] = "o campo " + key + " é obrigatório"
     if key in data_keys and not is_field_custom:
-        errors[key] = "You can not override the field " + key
+        errors[key] = "Não é permitido reescrever o campo " + key
 
 def check_for_not_acceptable_keys(data_keys,validation_keys,errors):
     for data_key in data_keys:
         if data_key not in validation_keys:
-            errors[data_key] = "Key not acceptable"
+            errors[data_key] = "Chave não é aceitável"
 
 def validate_text_fields(data_key, errors, key, is_optional,min,max):
     if type(data_key) is not str:
-        errors[key] = "Field must be a string"
+        errors[key] = "Campo tem de ser de texto"
     else:
         if ((is_optional and data_key) or not is_optional) and min is not None and min > 0 and len(data_key.strip()) < min:
             if key not in errors:
                 errors[key] = {}
-            errors[key]['min'] = "Text too short"
+            errors[key]['min'] = "Texto demasiado curto"
         if max is not None and max > 0 and len(data_key.strip()) > max:
             if key not in errors:
                 errors[key] = {}
-            errors[key]['max'] = "Text too long"
+            errors[key]['max'] = "Texto demasiado longo"
     
 def validate_email_field(data_key, errors, key):
     from django.core.validators import validate_email 
@@ -32,26 +34,22 @@ def validate_email_field(data_key, errors, key):
         errors[key] = e
         print("bad email, details:", e)
 
-def validate_select_field(data_key, errors, key, options_json):
-    options = dict(options_json)
-    list_options = options.get('options')
-    if list_options is None or len(list_options) == 0:
-        errors[key] = "Template options not provided. Please Contact an administrator"
+def validate_select_field(data_key, errors, key, options):
+    if options is None or len(options) == 0:
+        errors[key] = "Nenhum template disponível. Por favor contacte o administrador do sistema."
     elif data_key is list and len(data_key) > 1:
-        errors[key] = "Select one option only"
+        errors[key] = "Selecione apenas uma opção"
     else:
         has_key = False
-        for option in list_options:
-            if data_key == option.get('value'):
+        for option in options:
+            if data_key.get('value') == option:
                 has_key = True
         if not has_key:
             errors[key] = "Option " + str(data_key) + " is not valid"
 
-def validate_multiselect_field(data_key, errors, key, options_json, min, max):
-    options = dict(options_json)
-    list_options = options.get('options')
-    if list_options is None or len(list_options) == 0:
-        errors[key] = "Template options not provided. Please Contact an administrator"
+def validate_multiselect_field(data_key, errors, key, options, min, max):
+    if options is None or len(options) == 0:
+        errors[key] = "Não foram encontradas opções. Por favor, entrar em contacto com o administrador do sistema."
     else:
         if type(data_key) is list:
             selected_options = set(data_key)
@@ -61,26 +59,26 @@ def validate_multiselect_field(data_key, errors, key, options_json, min, max):
         if len(data_key) > len(selected_options):
             if key not in errors:
                 errors[key] = {}
-            errors[key]['duplicated'] = "Duplicated options selected"
+            errors[key]['duplicated'] = "Foram selecionadas opções duplicadas."
         for selected_option in selected_options:
             has_key = False
-            for option in list_options:
-                if selected_option == option.get('value') :
+            for option in options:
+                if selected_option == option :
                     has_key = True
             if not has_key:
                 if key not in errors:
                     errors[key] = {}
-                errors[key][selected_option] = "Option " + selected_option + " is not valid"
+                errors[key][selected_option] = "A opção " + selected_option + " não é válida."
             else:
                 valid_selected_options = valid_selected_options + 1
         if min is not None and min > 0 and valid_selected_options < min:
             if key not in errors:
                     errors[key] = {}
-            errors[key]['min'] = "Not enough options selected"
+            errors[key]['min'] = "Opções selecionadas insuficientes."
         if max is not None and max > 0 and valid_selected_options > max:
             if key not in errors:
                 errors[key] = {}
-            errors[key]['max'] = "Too many options selected"
+            errors[key]['max'] = "Demasiadas opções selecionadas."
 
 def validate_date_fields(data_key, errors, key, date_format):
     from datetime import datetime
@@ -218,7 +216,7 @@ def validate_boolean_field(data_key, errors, key):
     if type(data_key) is list and len(data_key) > 0:
         data_key = data_key[0]
     if type(data_key) is not bool:
-        errors[key] = "Value must be true or false"
+        errors[key] = "O valor tem de ser verdadeiro ou falso"
 
 def validate_integer_fields(data_key, errors, key, is_optional,min,max):
     try:
@@ -226,13 +224,13 @@ def validate_integer_fields(data_key, errors, key, is_optional,min,max):
         if ((is_optional and data_key) or not is_optional) and min is not None and min > 0 and int(data_key) < min:
             if key not in errors:
                 errors[key] = {}
-                errors[key]['min'] = "Value is lesser than %s" % max
+                errors[key]['min'] = "O valor é mais pequeno que %s" % max
         if max is not None and max > 0 and int(data_key) > max:
             if key not in errors:
                 errors[key] = {}
-                errors[key]['max'] = "Value is greater than %s" % max
+                errors[key]['max'] = "O valor é maior que %s" % max
     except ValueError as e:
-        errors[key] = "Value must be an integer"
+        errors[key] = "Valor tem de ser um inteiro"
 
 def run_template_validations(template_validations, data, operation):
     errors = {}
@@ -251,11 +249,11 @@ def run_template_validations(template_validations, data, operation):
             if key in data:
                 if field_type not in ["MULTISELECT", "RADIO"] and  type(data[key]) is list:
                     if(len(data[key]) > 1):
-                        errors[key] = "Too many options selected"
+                        errors[key] = "Demasiadas opções selecionadas"
                         continue
                     
                     if(len(data[key]) == 0) : 
-                        errors[key] = "No options selected"
+                        errors[key] = "Nenhuma opção selecionada"
                         continue
                     data_key = data[key][0]
                 else:
@@ -283,7 +281,7 @@ def run_template_validations(template_validations, data, operation):
                     if field_type == "INTEGER":
                         validate_integer_fields(data_key, errors, key, is_optional,validation.get('min'),validation.get('max'))
                 else:
-                    errors[key] = "Can not override field"        
+                    errors[key] = "Não é permitido reescrever este campo"        
                     
     if errors:
         return {"valid": False, "errors": errors}

@@ -88,18 +88,8 @@ SEND_TYPE_CHOICES = (
 
 class UploadSerializer(serializers.ModelSerializer):
     class ValidationsSerializer(serializers.Serializer):
-        class OptionsSerializer(serializers.Serializer):
-            class OptionSerializer(serializers.Serializer):
-                label = serializers.CharField()
-                value = serializers.CharField()
-                class Meta:
-                    fields = ['label','value']
-
-            options = serializers.ListField(allow_empty=True, allow_null=True, child = OptionSerializer())
-            variable_type = serializers.ChoiceField(choices = VARIABLE_TYPE_CHOICES)
-            
-            class Meta:
-                fields = ['options','variable_type']
+        class StringListField(serializers.ListField):
+            child = serializers.CharField()
 
         class CharOrListField(serializers.ListField):
             child = serializers.CharField()
@@ -116,10 +106,15 @@ class UploadSerializer(serializers.ModelSerializer):
                 else:
                     return value
 
-        name = serializers.CharField()
-        optional = serializers.BooleanField()
-        options = OptionsSerializer(allow_null=True,required = False)
-        field_type = serializers.ChoiceField(choices = FIELD_TYPE_CHOICES)
+        name = serializers.CharField(error_messages = {
+            "required": "Este campo é obrigatório",
+        })
+        optional = serializers.BooleanField(default=True)
+        options = StringListField(required=False, allow_empty=True, allow_null=True)
+        field_type = serializers.ChoiceField(choices = FIELD_TYPE_CHOICES, error_messages = {
+            "required": "Este campo é obrigatório",
+            "invalid_choice": "Opção inválida"
+        })
         placeholder = serializers.CharField(required = False)
         format = serializers.ChoiceField(required=False,allow_null = True, allow_blank = True,choices = FORMAT_CHOICES)
         #is_date_numerica true = escrever por extenso
@@ -139,26 +134,26 @@ class UploadSerializer(serializers.ModelSerializer):
             is_field_custom= data_dict.get('is_field_custom')
             validation_errors = {}
             if field_type in ["DATE","DATETIME","TIME"] and ('format' not in data_keys or data_dict.get('format') == ""):
-                validation_errors['format'] = ['When field_type is DATE, DATETIME or TIME, the field format is required.']
+                validation_errors['format'] = ['O campo formato da data é obrigatório.']
             if field_type in ["DATE","DATETIME","TIME"] and ('is_date_numeric' not in data_keys or data_dict.get('is_date_numeric') == ""):
-                validation_errors['is_date_numeric'] = ['When field_type is DATE, DATETIME or TIME, the field is_date_numeric is required.']
-            if field_type in ["DATE"] and data_dict.get('format') not in ["DAY_MONTH_YEAR","MONTH_YEAR","DAY_MONTH"]:
-                validation_errors['format'] = ['When field_type is DATE, format can be DAY_MONTH_YEAR, MONTH_YEAR or DAY_MONTH.']
-            if field_type in ["TIME"] and data_dict.get('format') not in ["HOURS_ONLY","MINUTES_ONLY","SECONDS_ONLY","HOURS_MINUTES_SECONDS","HOURS_MINUTES","MINUTES_SECONDS"]:
-                validation_errors['format'] = ['When field_type is TIME, format can be HOURS_ONLY, MINUTES_ONLY, SECONDS_ONLY, HOURS_MINUTES_SECONDS, HOURS_MINUTES or MINUTES_SECONDS.']
-            if field_type in ["DATETIME"] and data_dict.get('format') not in ["DAY_MONTH_YEAR_HOUR_MINUTE_SECOND","DAY_MONTH_YEAR_HOUR_MINUTE","DAY_MONTH_YEAR_HOUR","DAY_MONTH_HOUR_MINUTE_SECOND","DAY_MONTH_HOUR_MINUTE","DAY_MONTH_HOUR","MONTH_YEAR_HOUR_MINUTE_SECOND","MONTH_YEAR_HOUR_MINUTE","MONTH_YEAR_HOUR"]:
-                validation_errors['format'] = ['When field_type is DATETIME, format can be DAY_MONTH_YEAR_HOUR_MINUTE_SECOND, DAY_MONTH_YEAR_HOUR_MINUTE, DAY_MONTH_YEAR_HOUR, DAY_MONTH_HOUR_MINUTE_SECOND, DAY_MONTH_HOUR_MINUTE, DAY_MONTH_HOUR, MONTH_YEAR_HOUR_MINUTE_SECOND, MONTH_YEAR_HOUR_MINUTE, MONTH_YEAR_HOUR.']
-            if field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or data_dict.get('options') is None):
-                validation_errors['options'] = ['When field_type is SELECT, MULTISELECT or RADIO, the field options is required.']
+                validation_errors['is_date_numeric'] = ['O campo data por extenso é obrigatório.']
+            # if field_type in ["DATE"] and data_dict.get('format') not in ["DAY_MONTH_YEAR","MONTH_YEAR","DAY_MONTH"]:
+            #     validation_errors['format'] = ['Apenas são válidas as opções Dia/Mês/Ano, Mês/Ano ou Dia/Mês.']
+            # if field_type in ["TIME"] and data_dict.get('format') not in ["HOURS_ONLY","MINUTES_ONLY","SECONDS_ONLY","HOURS_MINUTES_SECONDS","HOURS_MINUTES","MINUTES_SECONDS"]:
+            #     validation_errors['format'] = ['When field_type is TIME, format can be HOURS_ONLY, MINUTES_ONLY, SECONDS_ONLY, HOURS_MINUTES_SECONDS, HOURS_MINUTES or MINUTES_SECONDS.']
+            # if field_type in ["DATETIME"] and data_dict.get('format') not in ["DAY_MONTH_YEAR_HOUR_MINUTE_SECOND","DAY_MONTH_YEAR_HOUR_MINUTE","DAY_MONTH_YEAR_HOUR","DAY_MONTH_HOUR_MINUTE_SECOND","DAY_MONTH_HOUR_MINUTE","DAY_MONTH_HOUR","MONTH_YEAR_HOUR_MINUTE_SECOND","MONTH_YEAR_HOUR_MINUTE","MONTH_YEAR_HOUR"]:
+            #     validation_errors['format'] = ['When field_type is DATETIME, format can be DAY_MONTH_YEAR_HOUR_MINUTE_SECOND, DAY_MONTH_YEAR_HOUR_MINUTE, DAY_MONTH_YEAR_HOUR, DAY_MONTH_HOUR_MINUTE_SECOND, DAY_MONTH_HOUR_MINUTE, DAY_MONTH_HOUR, MONTH_YEAR_HOUR_MINUTE_SECOND, MONTH_YEAR_HOUR_MINUTE, MONTH_YEAR_HOUR.']
+            if field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or len(data_dict.get('options')) == 0):
+                validation_errors['options'] = ['O campo opções é obrigatório.']
             if field_type in ["SELECT","MULTISELECT", "RADIO"] and data_dict.get('optional') and ('min' not in data_keys or data_dict.get('min') == 0):
-                validation_errors['min'] = ['When field of the  SELECT, MULTISELECT or RADIO is not optional, Field min is required.']
+                validation_errors['min'] = ['O campo mínimo é obrigatório.']
             if not is_field_custom and ('db_field_reference' not in data_keys or data_dict.get('db_field_reference') == ""):
-                validation_errors['db_field_reference'] = ['If is_field_custom is selected , db_field_reference is required.']
+                validation_errors['db_field_reference'] = ['o campo "Campo da Tabela" é obrigatório.']
             if not is_field_custom and ('db_collection' not in data_keys or data_dict.get('db_collection') == ""):
-                validation_errors['db_collection'] = ['If is_field_custom is selected , db_collection is required.']
+                validation_errors['db_collection'] = ['O campo "Tabela" é obrigatório.']
             if data_dict.get('is_field_custom') and 'db_field_reference' in data_keys and data_dict.get('db_field_reference') and 'db_collection' in data_keys and data_dict.get('db_collection'):
                 if (data_dict.get('db_collection') == "RECORDS" and data_dict.get('db_field_reference') not in [f.name for f in Record._meta.get_fields()]) or (data_dict.get('db_collection') == "GROUPS" and data_dict.get('db_field_reference') not in [f.name for f in Group._meta.get_fields()]) or (data_dict.get('db_collection') == "USERS" and data_dict.get('db_field_reference') not in [f.name for f in User._meta.get_fields()]):
-                    validation_errors['db_field_reference'] = ['Field name is invalid.']
+                    validation_errors['db_field_reference'] = ['O campo "Nome do campo" é obrigatório.']
             if data_dict.get('default_value') is not None and len(str(data_dict.get('default_value')).strip()) > 0:                 
                 prep_var_validation = [{"validations" : {"default_value":data}}]           
                 result = run_template_validations(prep_var_validation,{'default_value' : data.get('default_value')}, "CREATE_TEAMPLATE")
@@ -178,10 +173,17 @@ class UploadSerializer(serializers.ModelSerializer):
             return data
         class Meta:
             fields = ['name', 'optional', 'options', 'field_type', 'placeholder','format','label']
-    title = serializers.CharField(required = True, max_length = 256)
-    group = serializers.PrimaryKeyRelatedField(required = True, queryset = Group.objects.all())
+    title = serializers.CharField(required = True, max_length = 256, error_messages = {
+        "required": "Este campo é obrigatório"
+    })
+    group = serializers.PrimaryKeyRelatedField(required = True, queryset = Group.objects.all(), error_messages = {
+        "required": "Este campo é obrigatório"
+    })
     validations = serializers.ListField(allow_empty=True, child = ValidationsSerializer())
-    send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES)
+    send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, error_messages = {
+        "required": "Este campo é obrigatório",
+        "invalid_choice": "Opção inválida"
+    })
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
@@ -191,7 +193,12 @@ class UploadSerializer(serializers.ModelSerializer):
         data_dict = dict(data)
         data_keys = data.keys()
         send_type = data_dict.get('send_type')
+        title = data_dict.get('title')
         validation_errors = {}
+        if title is None or title == "":
+            validation_errors['title'] = ['The field title is required.'] 
+        if title is not None and len(str(title).strip()) > 0 and TemplateLogic.objects.filter(title = title, group = data_dict.get('group')).exists():
+            validation_errors['title'] = ['Template title has to be unique in group']
         if send_type in ["EMAIL","DOCUMENT_EMAIL"] and ('send_email_to' not in data_keys or ('send_email_to' in data_keys and (data_dict.get('send_email_to') == [] or data_dict.get('send_email_to') == None))):
             validation_errors['send_email_to'] = ['When send_type is EMAIL or DOCUMENT_EMAIL, the field send_email_to is required.']
         if send_type in ["DOCUMENT","DOCUMENT_EMAIL"] and ('file' not in data_keys or ('file' in data_keys and (data_dict.get('file') == "" or data_dict.get('file') == None))):
@@ -204,15 +211,8 @@ class UploadSerializer(serializers.ModelSerializer):
   
     class Meta:
         model = TemplateLogic
-        #
         fields = ['title','file','group','validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
-        validators = [
-            serializers.UniqueTogetherValidator(
-                queryset=model.objects.all(),
-                fields=('title', 'group'),
-                message= "Template title has to be unique in group"
-            )
-        ]
+        
 
 
 class EditUploadSerializer(serializers.ModelSerializer):    
@@ -290,7 +290,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
             if field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or data_dict.get('options') is None):
                 validation_errors['options'] = ['When field_type is SELECT, MULTISELECT or RADIO, the field options is required.']
             if field_type in ["SELECT","MULTISELECT", "RADIO"] and data_dict.get('optional') and ('min' not in data_keys or data_dict.get('min') == 0):
-                validation_errors['min'] = ['When field of the  SELECT, MULTISELECT or RADIO is not optional, Field min is required.']
+                validation_errors['min'] = ['Quando o campo é de opções, multiplas opções o campo "Minimo" não pode ser 0']
             if not is_field_custom and ('db_field_reference' not in data_keys or data_dict.get('db_field_reference') == ""):
                 validation_errors['db_field_reference'] = ['If is_field_custom is selected , db_field_reference is required.']
             if not is_field_custom and ('db_collection' not in data_keys or data_dict.get('db_collection') == ""):

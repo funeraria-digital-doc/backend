@@ -15,7 +15,6 @@ urlpatterns = [
     path('remove/<pk>/', views.remove, name='remove'),
     path('get-variables/<pk>/', views.get_variables, name='get_variables'),
     path('get-template/<pk>/', views.get_template, name='get_template'),
-    path('edit-variables/<pk>/', views.edit_variables, name='edit_variables'),
     path('<pk>/get-validations/', views.get_validations, name='get_validations'),
     path('<pk>/check-validations/', views.check_validations, name='check_validations'),
     path('sendTestMail/', views.sendTestMail, name='sendTestMail'),

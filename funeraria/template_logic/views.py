@@ -2,7 +2,6 @@ import io
 import os
 from django.http import HttpResponse
 from django.shortcuts import render
-from django.db.models import Case, When, Value, BooleanField, CharField
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -21,6 +20,7 @@ from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
 import json
 import logging
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -29,29 +29,25 @@ logger = logging.getLogger(__name__)
     operation_description="List all templates"
 ) 
 @api_view(['GET'])
-def list_templates(request):
-    from django.db.models import Q
+def list_templates(request):    
     try:
-    
-        #templates = TemplateLogic.objects.filter(file__exists=True, file__ne='').values('id', 'title', 'group_id', 'send_type', 'file')
-        templates = TemplateLogic.objects.annotate(
-            file_exists=Case(
-                When(Q(file__isnull=False) & ~Q(file=''), then=Value(True)),
-                default=Value(False),
-                output_field=CharField()
-            )
-        ).values('file_exists')
-        print(templates)
-        #results_list = [result.to_dict() for result in templates]
-        #logger.info(results_list)
-        # for template in templates:
-        #     template['file'] = bool(template['file'])
+        cache_key = 'all_templates'
+        templates = cache.get(cache_key)
+        if not templates:
+            logger.info('não tinha cache')
+            templates = TemplateLogic.objects.all().values('id','title','group_id', 'send_type', 'file')
+            for template in templates:
+                template['file'] = bool(template['file']) 
+            cache.set(cache_key, templates)
+        else:
+            cache.touch(cache_key)
         if templates:
-            return Response({'data' : json.dumps(templates)}, status=status.HTTP_200_OK)
-        return Response({'error' : 'No templates available'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'success' : True, 'data' : templates}, status=status.HTTP_200_OK)
+        else: 
+            return Response({'success' : False, 'data': ''}, status=status.HTTP_200_OK)
     except Exception as e:
-        logger.info(e)
-        return Response({'error' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
 @swagger_auto_schema(
     method='get',
@@ -60,10 +56,10 @@ def list_templates(request):
 @api_view(['GET'])
 #@permission_classes([IsAuthenticated])
 def get_variables(request, *args, **kwargs):
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values().first()
+    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('file').first()
     if template is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
-    variables = get_doc_variables(template)['vars']
+    variables = get_doc_variables(template, False, True)
     return Response(variables, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
@@ -103,39 +99,22 @@ def upload(request):
         'send_email_to_bcc' : request.data.get('send_email_to_bcc') if request.data.get('send_email_to_bcc') else [],
     }
     form = UploadSerializer(data = data)
-    if form.is_valid():
-        try:
+    try:
+        if form.is_valid():
             try:
                 form.save()
                 return Response({'data' : form.data}, status=status.HTTP_200_OK)
             except Exception as e:
                     logger.info(e)
                     return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        except Exception as e:
-            return Response({'errors' : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    else:
-        logger.info(form.errors)
-        return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@swagger_auto_schema(       
-    method='post',
-    operation_description="Edit template variables",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties= {'variable_old': openapi.Schema(title="variable_new",type=openapi.TYPE_STRING)},
-    ),
-)
-@api_view(['POST'])
-@parser_classes([JSONParser])
-def edit_variables(request, *args, **kwargs):
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values().first()
-    editDoc = editDocument(template, request.data, True)
-    if template is None:
-        return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
-    return Response({'not_found_keys' : editDoc.get('not_found_keys'), 'edited_keys' : editDoc.get('edited_keys')}, status=status.HTTP_200_OK)
+        else:
+            return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        logger.info(e)
+        return Response({'errors' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def editDocument(template, data, saveDocument):
-    doc_variables = get_doc_variables(template)
+    doc_variables = get_doc_variables(template, True, True)
     if len(doc_variables['vars']) ==  0:
         return Response({"error" : "No variables found"}, status = status.HTTP_404_NOT_FOUND)
     not_found_keys = []
@@ -204,7 +183,7 @@ def download(request, *args, **kwargs):
         if validate_data.get('valid'):
             changeVariablesObject = {}
             keys_missing = []
-            doc_variables = get_doc_variables(template)
+            doc_variables = get_doc_variables(template, True, True)
             getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record)
             if len(keys_missing) > 0:
                 return Response({'sucess' : False, "keys_missing" :keys_missing }, status=status.HTTP_400_BAD_REQUEST)
@@ -308,6 +287,8 @@ def getDbKeysToDoc(request, template, template_validations, changeVariablesObjec
 #@parser_classes([MultiPartParser])
 def edit(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(pk=kwargs.get('pk')).first()  
+    if template is None:
+        return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
     dup = hasDuplicates(request.data.get('validations'))
     if dup:
         return dup
@@ -333,13 +314,11 @@ def edit(request, *args, **kwargs):
         data['send_email_to_bcc'] = request.data.get('send_email_to_bcc') if request.data.get('send_email_to_bcc') is not None else []
     serializer = EditUploadSerializer(data = data,instance=template, partial=True)  
     if serializer.is_valid():
-        if template is None:
-                return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
             serializer.update(instance = template, validated_data=serializer.validated_data)
-            return Response(serializer.data, status = status.HTTP_200_OK)
+            return Response({'success' : True}, status = status.HTTP_200_OK)
         except:
-            return Response({'error' : "something went wrong updating template","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+            return Response({'success' : False,"data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
         logger.info(serializer.errors)
         return Response({'error' : json.dumps(serializer.errors)}, status = status.HTTP_400_BAD_REQUEST)   
@@ -351,22 +330,24 @@ def edit(request, *args, **kwargs):
 ) 
 @api_view(['POST'])
 def remove(request, *args, **kwargs):   
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).first()
-    if template is None:
-        return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     try:
-        template.delete()
-        return Response({"success" : "Template deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
-    except:
-        return Response({"success" : "An error as occured. Try again later!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        TemplateLogic.objects.filter(id=kwargs.get('pk')).delete()
+        return Response({"success" : True}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as error:
+        return Response({"success" : False, 'error' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-def get_doc_variables(template):
+def get_doc_variables(template, getDoc, getVars):
     doc = DocxTemplate('media/' + template.get('file'))
     variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
-    return {
-        'vars' : variables,
-        'doc' : doc
-    }
+    if getDoc and getVars:
+        return {
+            'vars' : variables,
+            'doc' : doc
+        }
+    if getDoc:
+         return doc
+    if getVars:
+        return variables
 
 @swagger_auto_schema(
     method='get',
@@ -378,9 +359,9 @@ def get_validations(request, *args, **kwargs):
     if template_validations is None:
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     try:
-        return Response({"success" : "Template  validations checked successfully!","data" : template_validations}, status=status.HTTP_200_OK)
+        return Response({"success" : True,"data" : template_validations}, status=status.HTTP_200_OK)
     except:
-        return Response({"success" : "An error as occured. Try again later!"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"success" : False}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @swagger_auto_schema(
@@ -389,9 +370,9 @@ def get_validations(request, *args, **kwargs):
 ) 
 @api_view(['POST'])
 def check_validations(request, *args, **kwargs):
-    if not TemplateLogic.objects.filter(id=kwargs.get('pk')).exists():
-        return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     template_validations = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('validations')
+    if not template_validations:
+        return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     validate_data = run_template_validations(list(template_validations), request.data, "CHECK_VALIDATIONS")
     if not validate_data.get('valid') :
         return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
@@ -403,7 +384,7 @@ def check_validations(request, *args, **kwargs):
 ) 
 @api_view(['GET'])
 def get_template(request, *args, **kwargs):
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values().first()
+    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('id', 'title', 'group_id', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc', 'file', 'validations').first()
     if template is None:
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     try:

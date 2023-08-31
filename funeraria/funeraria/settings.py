@@ -108,18 +108,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'djongo',
         'NAME':  'funeraria',
-        #config('DJANGO_DB_NAME'),
         'ENFORCE_SCHEMA': True,
         'CLIENT': {
             'host':  'mongodb+srv://funerariadigitaldoc:***REMOVED-MONGO-PASSWORD***@funerariamongo.jbar8li.mongodb.net/?retryWrites=true&w=majority'
-            #config('MONGO_HOST'),
-            # 'port': 27017,
-            # 'username' :  config('MONGO_USERNAME'),
-            # 'password' :  config('MONGO_PASSWORD'),
-            # 'authSource': 'admin',
-            # 'tls': True,
-        }  
-        
+        }
     }
 }
 
@@ -251,6 +243,6 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'funeraria',
-        'TIMEOUT': 600
+        'TIMEOUT': 36400
     }
 }
