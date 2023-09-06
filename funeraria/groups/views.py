@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
 from groups.models import Group
+from template_logic.models import TemplateLogic
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
@@ -105,6 +106,35 @@ def list(request, *args, **kwargs):
         cache.touch(cache_key)
     groups = Group.objects.all().values('id','name')
     return Response(groups, status = status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="get data stats"
+) 
+@api_view(['GET'])
+def get_data(request, *args, **kwargs):
+    pipeline = [
+        {
+            '$group': {
+                '_id': {
+                    '$dateToString': {
+                        'format': '%Y-%m-%d',
+                        'date': '$created_at'
+                    }
+                },
+                'count': {'$sum': 1}
+            }
+        },
+        {
+            '$project': {
+                'categories': '$_id',
+                'data': '$count'
+            }
+        }
+    ]
+    stats = TemplateLogic.objects.mongo_aggregate(pipeline)
+    return Response(stats, status = status.HTTP_200_OK)
 
 
 

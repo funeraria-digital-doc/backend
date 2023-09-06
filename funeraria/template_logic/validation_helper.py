@@ -42,7 +42,7 @@ def validate_select_field(data_key, errors, key, options):
     else:
         has_key = False
         for option in options:
-            if data_key.get('value') == option:
+            if data_key == option:
                 has_key = True
         if not has_key:
             errors[key] = "Option " + str(data_key) + " is not valid"
@@ -82,6 +82,7 @@ def validate_multiselect_field(data_key, errors, key, options, min, max):
 
 def validate_date_fields(data_key, errors, key, date_format):
     from datetime import datetime
+    logger.info(data_key)
     if type(data_key) is not str:
         errors[key] = "Date field must be a string"
     else:
@@ -247,13 +248,13 @@ def run_template_validations(template_validations, data, operation):
             if operation == "CHECK_VALIDATIONS":
                 required_or_override(data_keys, key, is_optional, is_field_custom, errors)  
             if key in data:
-                if field_type not in ["MULTISELECT", "RADIO"] and  type(data[key]) is list:
+                if field_type not in ["MULTISELECT", "RADIO", "DATE"] and  type(data[key]) is list:
                     if(len(data[key]) > 1):
                         errors[key] = "Demasiadas opções selecionadas"
                         continue
-                    
                     if(len(data[key]) == 0) : 
-                        errors[key] = "Nenhuma opção selecionada"
+                        data_key = ''
+                        # errors[key] = "Nenhuma opção selecionada"
                         continue
                     data_key = data[key][0]
                 else:
@@ -268,8 +269,13 @@ def run_template_validations(template_validations, data, operation):
                         validate_select_field(data_key, errors, key, validation.get('options'))
                     if field_type in ["MULTISELECT", "RADIO"]:
                         validate_multiselect_field(data_key, errors, key, validation.get('options'), validation.get('min'), validation.get('max'))
-                    if field_type in ["DATE", "DATETIME","TIME"]:  
-                        validate_date_fields(data_key, errors, key, validation.get('format')) 
+                    if field_type in ["DATE", "DATETIME","TIME"]: 
+                        if key == 'default_value' and len(data_key) == 0:
+                            data_key = ''
+                        elif key == 'default_value' and len(data_key) == 1:
+                            data_key = data_key[0]
+                        if data_key != '':
+                            validate_date_fields(data_key, errors, key, validation.get('format')) 
                     if field_type == "YEAR":
                         validate_year_field(data_key, errors, key)
                     if field_type == "MONTH":

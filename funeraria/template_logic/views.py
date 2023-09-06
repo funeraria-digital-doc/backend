@@ -35,9 +35,34 @@ def list_templates(request):
         templates = cache.get(cache_key)
         if not templates:
             logger.info('não tinha cache')
-            templates = TemplateLogic.objects.all().values('id','title','group_id', 'send_type', 'file')
-            for template in templates:
-                template['file'] = bool(template['file']) 
+            pipeline = [
+                {
+                    '$addFields': {
+                        'new_file': {
+                            '$cond': [{'$eq': ['$file', '']}, False, True]
+                        }
+                    }
+                },
+                {
+                    '$project': {
+                        'id': '$id',
+                        'title': '$title',
+                        'group_id': '$group_id', 
+                        'send_type': '$send_type',
+                        'file': '$new_file'
+                    }
+                }
+            ]
+            result = TemplateLogic.objects.mongo_aggregate(pipeline)
+            templates = []
+            for item in result:
+                newItem = {}
+                newItem['id'] = item['id']
+                newItem['title'] = item['title']
+                newItem['group_id'] = item['group_id']
+                newItem['send_type'] = item['send_type']
+                newItem['file'] = item['file']
+                templates.append(newItem)
             cache.set(cache_key, templates)
         else:
             cache.touch(cache_key)
@@ -312,16 +337,17 @@ def edit(request, *args, **kwargs):
         data['send_email_to_cc'] = request.data.get('send_email_to_cc') if request.data.get('send_email_to_cc') is not None else []
     if request.data.get('send_email_to_bcc'):
         data['send_email_to_bcc'] = request.data.get('send_email_to_bcc') if request.data.get('send_email_to_bcc') is not None else []
-    serializer = EditUploadSerializer(data = data,instance=template, partial=True)  
+    #serializer = EditUploadSerializer(data = data,instance=template, partial=True)  
+    serializer = EditUploadSerializer(data = data,instance=template)  
     if serializer.is_valid():
         try:            
             serializer.update(instance = template, validated_data=serializer.validated_data)
             return Response({'success' : True}, status = status.HTTP_200_OK)
         except:
-            return Response({'success' : False,"data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+            return Response({'success' : False,"errors" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
         logger.info(serializer.errors)
-        return Response({'error' : json.dumps(serializer.errors)}, status = status.HTTP_400_BAD_REQUEST)   
+        return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
     
 
 @swagger_auto_schema(
