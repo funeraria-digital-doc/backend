@@ -1,27 +1,27 @@
 import io
 import os
 from django.http import HttpResponse
-from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from docxtpl import DocxTemplate
-from accounts.models import User
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny
+#, permission_classes
+#from rest_framework.permissions import IsAuthenticated
 from template_logic.serealizers import SEND_TYPE_CHOICES
 from template_logic.validation_helper import *
-from groups.models import Group
 from template_logic.serealizers import UploadSerializer, EditUploadSerializer
 from template_logic.models import TemplateLogic
 from records.models import Record
-from drf_yasg import openapi
+from groups.models import Group
+from accounts.models import User
+#from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.parsers import MultiPartParser, JSONParser
-from rest_framework.decorators import parser_classes
-import json
+# from rest_framework.parsers import MultiPartParser, JSONParser
+# from rest_framework.decorators import parser_classes
+from django.db import connection
 import logging
 from django.core.cache import cache
-
+from django.db import connection
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
     operation_description="List all templates"
 ) 
 @api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def list_templates(request):    
     try:
         cache_key = 'all_templates'
@@ -73,6 +75,27 @@ def list_templates(request):
     except Exception as e:
         return Response({'error' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+@api_view(['GET'])  
+def profile_view(request):
+    
+    query_log = connection.queries
+    logger.info(query_log)
+    # Print the query log
+    # for query in query_log:
+    #     logger.info(query)
+    return Response({'success' : True}, status=status.HTTP_200_OK)
+    # import cProfile
+    # import pstats
+
+    # # Run the view function with cProfile
+    # profiler = cProfile.Profile()
+    # profiler.runcall(list_templates, request)
+    # profiler.dump_stats('profile_data.txt')
+
+    # # Print the profiling data
+    # stats = pstats.Stats('profile_data.txt')
+    # stats.sort_stats('cumulative')
+    # stats.print_stats()
 
 @swagger_auto_schema(
     method='get',
@@ -94,6 +117,7 @@ def get_variables(request, *args, **kwargs):
 @api_view(['POST'])
 #@permission_classes([IsAuthenticated])
 def get_variables_from_file(request, *args, **kwargs):
+    from docxtpl import DocxTemplate
     file = request.FILES.get('file')
     if file:
         doc = DocxTemplate(file)
@@ -139,6 +163,7 @@ def upload(request):
         return Response({'errors' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def editDocument(template, data, saveDocument):
+    from django.shortcuts import render
     doc_variables = get_doc_variables(template, True, True)
     if len(doc_variables['vars']) ==  0:
         return Response({"error" : "No variables found"}, status = status.HTTP_404_NOT_FOUND)
@@ -363,6 +388,7 @@ def remove(request, *args, **kwargs):
         return Response({"success" : False, 'error' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 def get_doc_variables(template, getDoc, getVars):
+    from docxtpl import DocxTemplate
     doc = DocxTemplate('media/' + template.get('file'))
     variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
     if getDoc and getVars:

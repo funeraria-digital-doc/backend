@@ -1,5 +1,8 @@
 from io import BytesIO
-from rest_framework.decorators import api_view, permission_classes
+
+from django.conf import settings
+from funeraria.authentication import CachingTokenAuthentication
+from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,10 +14,10 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
-import logging
 from funeraria.permissions import IsAdmin, IsSuperUser, isEqualOrUpperPermission
 from django.db.models import F
 from django.core.cache import cache
+import logging
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(       
@@ -135,9 +138,14 @@ def logout(request):
     operation_description="Get user profile information"
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+#@authentication_classes([CachingTokenAuthentication])
+@permission_classes([IsAdmin])
 def profile(request): 
-    user = User.objects.filter(id=Token.objects.get(key=request.auth.key).user_id).annotate(name=F('username')).values('id','name','email').first()
+    user = {
+        'id' : request.user.id,
+        'name' : request.user.username,
+        'email' : request.user.email
+    }
     if user: 
         return Response(user, status=status.HTTP_200_OK)
     return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)

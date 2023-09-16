@@ -1,8 +1,5 @@
-import base64
-from django.forms import ValidationError
 from djongo import models
 from django_currentuser.db.models import CurrentUserField
-from django.core.files.base import ContentFile
 from groups.models import Group
 import logging
 from django.core.cache import cache
@@ -28,10 +25,16 @@ class TemplateLogic(models.Model):
 
     def delete(self, *args, **kwargs):
         cache.delete('all_templates')
+        cache.delete('templates_created_in_last_30')
+        cache.delete('templates_created_in_last_60')
+        cache.delete('templates_created_in_last_90')
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         cache.delete('all_templates')
+        cache.delete('templates_created_in_last_30')
+        cache.delete('templates_created_in_last_60')
+        cache.delete('templates_created_in_last_90')
         super().save(*args, **kwargs)
 
 

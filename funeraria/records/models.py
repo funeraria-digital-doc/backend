@@ -1,7 +1,10 @@
-from django.db import models
+#from django.db import models
+from djongo import models
 from groups.models import Group
 from django_currentuser.db.models import CurrentUserField
-
+import logging
+from django.core.cache import cache
+logger = logging.getLogger(__name__)
 
 class Record(models.Model):
 
@@ -71,10 +74,22 @@ class Record(models.Model):
     family_member_kinship = models.CharField(max_length=64, db_column='family_member_kinship', null=True, blank=True) 
     family_member_phone = models.CharField(max_length=32, db_column='family_member_phone') 
     death_declaration_number = models.CharField(max_length=32, db_column='death_declaration_number', null=True, blank=True) 
-
+    objects = models.DjongoManager()
 
     def __str__(self):
         return self.name
+
+    def delete(self, *args, **kwargs):
+        cache.delete('deaths_in_last_30')
+        cache.delete('deaths_in_last_60')
+        cache.delete('deaths_in_last_90')
+        super().delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        cache.delete('deaths_in_last_30')
+        cache.delete('deaths_in_last_60')
+        cache.delete('deaths_in_last_90')
+        super().save(*args, **kwargs)
     
     
 

@@ -1,10 +1,10 @@
 from rest_framework import permissions
 import logging 
 from accounts.models import User
-
+logger = logging.getLogger(__name__)
 class IsAdmin(permissions.IsAdminUser):
-
     def has_permission(self, request, view):
+        #logger.info(request.user)
         return bool(request.user and request.user.is_staff)
 
 class IsSuperUser(permissions.BasePermission):

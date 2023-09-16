@@ -15,15 +15,14 @@ import os
 from decouple import config
 from djongo.operations import DatabaseOperations
 import logging
+logger = logging.getLogger(__name__)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+#BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DJANGO_SETTINGS_MODULE='funeraria.settings'
-
 DatabaseOperations.conditional_expression_supported_in_where_clause = (
     lambda *args, **kwargs: False
 )
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
 
@@ -31,7 +30,7 @@ DatabaseOperations.conditional_expression_supported_in_where_clause = (
 SECRET_KEY = '***REMOVED-DJANGO-SECRET-KEY***'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 CORS_ORIGIN_ALLOW_ALL = True
@@ -61,6 +60,7 @@ INSTALLED_APPS = [
     'accounts',
     'template_logic',
     'records',
+    'stats',
     'drf_yasg',
     'corsheaders'
 ]
@@ -69,14 +69,16 @@ SITE_ID = 1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_currentuser.middleware.ThreadLocalUserMiddleware'
-    #'funeraria.middlewares.template_logic.middleware.DuplicateKeysMiddleware',
+    'django_currentuser.middleware.ThreadLocalUserMiddleware',
+    
+    #'funeraria.middlewares.time_middleware.TimingMiddleware'
 ]
 
 ROOT_URLCONF = 'funeraria.urls'
@@ -138,9 +140,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/dev/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'pt-pt'
+LANGUAGES = [
+    ('pt-pt', 'Portuguese'),
+]
+TIME_ZONE = 'Europe/Lisbon'
 
 USE_I18N = True
 
@@ -153,16 +157,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
-#STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+#STATICFILES_DIRS = [os.path.join('../', 'static')]
 # Default primary key field type
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-# REST_USE_JWT = True
 AUTH_USER_MODEL = 'accounts.User'
 REGISTRATION_EMAIL_CONFIRM = False
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema' ,
 
@@ -172,13 +173,13 @@ REST_FRAMEWORK = {
     # 'DEFAULT_AUTHENTICATION_CLASSES': (
     #     'accounts.authentication.BearerAuthentication',
     # ),
-    # 'DEFAULT_AUTHENTICATION_CLASSES': [
-    #     'rest_authtoken.auth.AuthTokenAuthentication',
-    # ],
+
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-        #'rest_framework.authentication.SessionAuthentication'
+        'funeraria.authentication.CachingTokenAuthentication',
+        #'rest_framework.authentication.TokenAuthentication',
     ],
+    
+        #'rest_framework.authentication.SessionAuthentication'
 
     # 'DEFAULT_THROTTLE_CLASSES': [
     #     'rest_framework.throttling.AnonRateThrottle',
@@ -223,8 +224,8 @@ SWAGGER_SETTINGS = {
     ],
 }
 
-STATIC_ROOT = '/static'
-
+#STATIC_ROOT = '/static'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -246,3 +247,5 @@ CACHES = {
         'TIMEOUT': 36400
     }
 }
+
+

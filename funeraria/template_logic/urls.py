@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('list/', views.list_templates, name='list_templates'),
+    #path('profile/', views.profile_view, name='profile_view'),
     path('list-group-templates/', views.list_group_templates, name='list_group_templates'),
     path('upload/', views.upload, name='upload'),
     path('get-variables-from-file/', views.get_variables_from_file, name='get_variables_from_file'),

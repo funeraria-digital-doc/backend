@@ -1,16 +1,14 @@
 import logging
-from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny
 from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
 from groups.models import Group
-from template_logic.models import TemplateLogic
-from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
-from rest_framework.decorators import parser_classes
+from rest_framework.parsers import JSONParser
 from django.core.cache import cache
+from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -95,6 +93,8 @@ def remove(request, *args, **kwargs):
     operation_description="List all groups"
 ) 
 @api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def list(request, *args, **kwargs):
     cache_key = 'all_groups'
     groups = cache.get(cache_key)
@@ -104,37 +104,8 @@ def list(request, *args, **kwargs):
         cache.set(cache_key, groups)
     else:
         cache.touch(cache_key)
-    groups = Group.objects.all().values('id','name')
+    #groups = Group.objects.all().values('id','name')
     return Response(groups, status = status.HTTP_200_OK)
-
-
-@swagger_auto_schema(
-    method='get',
-    operation_description="get data stats"
-) 
-@api_view(['GET'])
-def get_data(request, *args, **kwargs):
-    pipeline = [
-        {
-            '$group': {
-                '_id': {
-                    '$dateToString': {
-                        'format': '%Y-%m-%d',
-                        'date': '$created_at'
-                    }
-                },
-                'count': {'$sum': 1}
-            }
-        },
-        {
-            '$project': {
-                'categories': '$_id',
-                'data': '$count'
-            }
-        }
-    ]
-    stats = TemplateLogic.objects.mongo_aggregate(pipeline)
-    return Response(stats, status = status.HTTP_200_OK)
 
 
 

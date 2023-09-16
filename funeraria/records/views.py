@@ -100,7 +100,7 @@ def remove(request, *args, **kwargs):
 ) 
 @api_view(['GET'])
 def list(request, *args, **kwargs):
-    records = Record.objects.all().values()
+    records = Record.objects.all().values('name','family_member_phone','gender','group_id','email','status')
     return Response(records, status = status.HTTP_200_OK)
 
 
