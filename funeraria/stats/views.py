@@ -84,7 +84,7 @@ def deaths_per_day(request, *args, **kwargs):
         pipeline = [
             {
                 '$match': {
-                    'created_at': {'$gte': days_ago}
+                    'death_date': {'$gte': days_ago}
                 }
             },
             {
@@ -92,7 +92,7 @@ def deaths_per_day(request, *args, **kwargs):
                     '_id': {
                         '$dateToString': {
                             'format': '%Y-%m-%d',
-                            'date': '$created_at'
+                            'date': '$death_date'
                         }
                     },
                     'count': {'$sum': 1}
@@ -138,15 +138,32 @@ def deaths_by_district(request, *args, **kwargs):
         days_ago = datetime.now() - timedelta(days=days_number)
         districts = ['Aveiro','Beja','Braga','Bragança','Castelo Branco','Coimbra','Évora','Faro','Guarda','Leiria','Lisboa','Portalegre','Porto','Santarém','Setúbal','Viana do Castelo','Vila Real','Viseu']
         default_data = dict.fromkeys(districts, 0)
-        api_data = {
-            'Braga' : round(1 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Leiria' : round(7 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Évora' : round(2 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Santarém' : round(9 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Portalegre' : round(2  * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Lisboa' : round(4 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Viseu' : round(1 * (days_number/10) * (random.randint(9, 11) / 10)),
-        }
+        pipeline = [
+            {
+                '$match': {
+                    'wake_date': {'$gte': days_ago}
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$district',
+                    'count': {'$sum': 1}
+                }
+            },
+            {
+                '$project': {
+                    'district': '$_id',
+                    'count': 1,
+                    '_id' : 0
+                }
+            },
+            {
+                '$sort': {'count': -1}
+            }
+        ]
+
+        stats = Record.objects.mongo_aggregate(pipeline)  
+        api_data = {stat['district']: stat['count'] for stat in stats}
         for key, value in api_data.items():
             default_data[key] = value
         sorted_obj = dict(sorted(default_data.items(), key=lambda item: item[1],reverse=True))
@@ -175,16 +192,44 @@ def deaths_by_user(request, *args, **kwargs):
     if not result:
         logger.info('não tinha cache')
         days_ago = datetime.now() - timedelta(days=days_number)
-        users = ['Ricardo', 'Bruno', 'Cláudio']
-        default_data = dict.fromkeys(users, 0)
-        api_data = {
-            'Ricardo' : round(5 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Bruno' : round(6 * (days_number/10) * (random.randint(9, 11) / 10)),
-            'Cláudio' : round(4 * (days_number/10) * (random.randint(9, 11) / 10))
-        }
-        for key, value in api_data.items():
-            default_data[key] = value
-        result = dict(sorted(default_data.items(), key=lambda item: item[1],reverse=True))
+        pipeline = [
+            {
+                '$match': {
+                    'wake_date': {'$gte': days_ago}
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'accounts_user', 
+                    'localField': 'created_by_id',
+                    'foreignField': 'id',
+                    'as': 'user'
+                }
+            },
+            {
+                '$unwind': '$user'
+            },
+            {
+                '$group': {
+                    '_id': '$user.username',
+                    'count': {'$sum': 1}
+                }
+            },
+            {
+                '$project': {
+                    'username': '$_id',
+                    'count': 1,
+                    '_id' : 0
+                }
+            },
+            {
+                '$sort': {'count': -1}
+            }
+        ]
+
+        stats = Record.objects.mongo_aggregate(pipeline)  
+        api_data = {stat['username']: stat['count'] for stat in stats}
+        result = dict(sorted(api_data.items(), key=lambda item: item[1],reverse=True))
         cache.set(cache_key, result)
     else:
         cache.touch(cache_key)

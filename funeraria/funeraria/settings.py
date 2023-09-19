@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'template_logic',
     'records',
     'stats',
+    'faker_service',
     'drf_yasg',
     'corsheaders'
 ]

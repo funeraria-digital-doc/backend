@@ -28,7 +28,7 @@ STATUS_CHOICES = (
 class RecordCreateSerializer(serializers.ModelSerializer):
 
     gender = serializers.ChoiceField(choices = GENDER_CHOICES)
-    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES)
+    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, allow_null = True)
     marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES)
     status = serializers.ChoiceField(choices = STATUS_CHOICES)
     class Meta:

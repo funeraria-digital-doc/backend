@@ -29,6 +29,8 @@ class Record(models.Model):
     address = models.CharField(max_length=255, db_column='address', null=True, blank=True) 
     parish = models.CharField(max_length=255, db_column='parish', null=True, blank=True) 
     municipality = models.CharField(max_length=255, db_column='municipality', null=True, blank=True) 
+    district = models.CharField(max_length=255, db_column='district', null=True, blank=True) 
+    nationality = models.CharField(max_length=255, db_column='nationality', null=True, blank=True) 
     mother_name = models.CharField(max_length=255, db_column='mother_name', null=True, blank=True) 
     father_name = models.CharField(max_length=255, db_column='father_name', null=True, blank=True) 
     last_mariage_date = models.DateField(db_column='last_mariage_date', null=True, blank=True)
