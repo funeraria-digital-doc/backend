@@ -4,7 +4,7 @@ from groups.models import Group
 import logging
 from django.core.cache import cache
 logger = logging.getLogger(__name__)
-
+cache_keys = ['all_templates']
 class TemplateLogic(models.Model):
     title = models.CharField(max_length=255, null=True)
     file = models.CharField(max_length=100000, null=True)
@@ -24,17 +24,11 @@ class TemplateLogic(models.Model):
         return self.title
 
     def delete(self, *args, **kwargs):
-        cache.delete('all_templates')
-        cache.delete('templates_created_in_last_30')
-        cache.delete('templates_created_in_last_60')
-        cache.delete('templates_created_in_last_90')
+        cache.delete_many(cache_keys)
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        cache.delete('all_templates')
-        cache.delete('templates_created_in_last_30')
-        cache.delete('templates_created_in_last_60')
-        cache.delete('templates_created_in_last_90')
+        cache.delete_many(cache_keys)
         super().save(*args, **kwargs)
 
 

@@ -200,3 +200,17 @@ def create_group_with_users(request):
         if group_id is not None:
             Group.objects.filter(id = group_id).first().delete()
     return Response({'success' : True, 'data': created_users}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def create_templates(request):
+    from django.core.cache import caches
+
+    cache = caches['default']  # Replace 'default' with your cache alias, if needed
+    keys_values = cache._cache
+
+
+    # for key, value in keys_values.items():
+    #     print(f"Key: {key}, Value: {value}")
+
+    return Response({'success' : True, 'data': keys_values}, status=status.HTTP_200_OK)

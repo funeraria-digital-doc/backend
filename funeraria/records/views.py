@@ -65,21 +65,23 @@ def view(request, *args, **kwargs):
 # @parser_classes([MultiPartParser])
 def update(request, *args, **kwargs):
     recordInstance = Record.objects.filter(pk=kwargs.get('pk')).first() 
-    record = {}
-    for requestPart in request.POST:
-        record[requestPart] = request.POST.get(requestPart)
-    for requestFile in request.FILES:
-        record[requestFile] = request.FILES.get(requestFile)
+    record = request.data
+    # for requestFile in request.FILES:
+    #     record[requestFile] = request.FILES.get(requestFile)
+    logger.info(record)
+    logger.info(request.FILES)
     serializer = RecordUpdateSerializer(data = record,instance=recordInstance, partial=True)   
     if serializer.is_valid():
         if record is None:
                 return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
-            serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
+            #serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
+            logger.info(serializer.data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
             return Response({'error' : "something went wrong updating record","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
+        logger.info(serializer.errors)
         return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
 
 @swagger_auto_schema(
@@ -100,7 +102,7 @@ def remove(request, *args, **kwargs):
 ) 
 @api_view(['GET'])
 def list(request, *args, **kwargs):
-    records = Record.objects.all().values('name','family_member_phone','gender','group_id','email','status')
+    records = Record.objects.all().values('id','name','family_member_phone','gender','group_id','email','status')
     return Response(records, status = status.HTTP_200_OK)
 
 

@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
 from drf_yasg.utils import swagger_auto_schema
-import random
+from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
@@ -16,27 +16,28 @@ logger = logging.getLogger(__name__)
     operation_description="get templates per day data"
 ) 
 @api_view(['GET'])
-def templates_per_day(request, *args, **kwargs):
-    days_number = int(request.query_params.get('days'))
-    if days_number is None:
+def deaths_per_months(request, *args, **kwargs):
+    months = int(request.query_params.get('months'))
+    if months is None:
         return Response({'error': 'Dia inválido'}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
-    cache_key = 'templates_created_in_last_' + str(days_number)
+    cache_key = 'records_per_month_' + str(months)
     result = cache.get(cache_key)
     if not result:
         logger.info('não tinha cache')
-        days_ago = datetime.now() - timedelta(days=days_number)
+        now = datetime.now()
+        days_ago = (now - relativedelta(months=(months-1))).replace(day=1)
         pipeline = [
             {
                 '$match': {
-                    'created_at': {'$gte': days_ago}
+                    'death_date': {'$gte': days_ago}
                 }
             },
             {
                 '$group': {
                     '_id': {
                         '$dateToString': {
-                            'format': '%Y-%m-%d',
-                            'date': '$created_at'
+                            'format': '%Y-%m',
+                            'date': '$death_date'
                         }
                     },
                     'count': {'$sum': 1}
@@ -53,15 +54,17 @@ def templates_per_day(request, *args, **kwargs):
             }
         ]
 
-        stats = TemplateLogic.objects.mongo_aggregate(pipeline)    
-        dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days_number)]
+        stats = Record.objects.mongo_aggregate(pipeline)    
+        dates = [(datetime.now() - relativedelta(months=(i))).replace(day=1).strftime('%Y-%m') for i in range(months)]
         stats_dict = {stat['categories']: stat['data'] for stat in stats}
         for date in dates:
             if date not in stats_dict:
                 stats_dict[date] = 0
+        
         result = [{'categories': date, 'data': data} for date, data in stats_dict.items()]
 
         result.sort(key=lambda x: x['categories'])
+        logger.info(result)
         cache.set(cache_key, result)
     else:
         cache.touch(cache_key)
@@ -234,3 +237,105 @@ def deaths_by_user(request, *args, **kwargs):
     else:
         cache.touch(cache_key)
     return Response(result, status = status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="get current month services number"
+) 
+@api_view(['GET'])
+def current_month_services(request, *args, **kwargs):
+    cache_key = 'current_month_services'
+    result = cache.get(cache_key)
+    if not result:
+        logger.info('não tinha cache')
+        now = datetime.now()
+        days_ago = now.replace(day=1)  
+        result = Record.objects.filter(death_date__gte=days_ago).count()
+        logger.info(result)
+        cache.set(cache_key, result)
+    else:
+        cache.touch(cache_key)
+    return Response({'result': result}, status = status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="get current year services number"
+) 
+@api_view(['GET'])
+def current_year_services(request, *args, **kwargs):
+    cache_key = 'current_year_services'
+    result = cache.get(cache_key)
+    if not result:
+        logger.info('não tinha cache')
+        now = datetime.now()
+        days_ago = now.replace(day=1, month=1)  
+        result = Record.objects.filter(death_date__gte=days_ago).count()
+        logger.info(result)
+        cache.set(cache_key, result)
+    else:
+        cache.touch(cache_key)
+    return Response({'result': result}, status = status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="get best month"
+) 
+@api_view(['GET'])
+def best_month(request, *args, **kwargs):
+    cache_key = 'best_month'
+    result = cache.get(cache_key)
+    if not result:
+        logger.info('não tinha cache')
+        days_ago = datetime.now().replace(day=1, month=1)
+        pipeline = [
+            {
+                '$match': {
+                    'death_date': {'$gte': days_ago}
+                }
+            },
+            {
+                '$group': {
+                    '_id': {
+                        '$dateToString': {
+                            'format': '%m',
+                            'date': '$death_date'
+                        }
+                    },
+                    'count': {'$sum': 1}
+                }
+            },
+            {
+                '$project': {
+                    'categories': '$_id',
+                    'data': '$count'
+                }
+            },
+            {
+                '$sort': {'categories': 1}
+            }
+        ]
+
+        stats = Record.objects.mongo_aggregate(pipeline)    
+        stats_dict = {}
+        for stat in stats:
+            stats_dict[stat.get('categories')] = stat.get('data')
+        month = max(stats_dict, key=stats_dict.get)
+        month_names = {
+            '01': 'Janeiro',
+            '02': 'Fevereiro',
+            '03': 'Março',
+            '04': 'Abril',
+            '05': 'Maio',
+            '06': 'Junho',
+            '07': 'Julho',
+            '08': 'Agosto',
+            '09': 'Setembro',
+            '10': 'Outubro',
+            '11': 'Novembro',
+            '12': 'Dezembro'
+        }
+        result = month_names.get(month)
+        cache.set(cache_key, result)
+    else:
+        cache.touch(cache_key)
+    return Response({'result': result}, status = status.HTTP_200_OK)
