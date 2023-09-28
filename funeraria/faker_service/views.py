@@ -1,11 +1,10 @@
 import random
 from django.shortcuts import render
-
-# Create your views here.
+from funeraria.permissions import IsSuperUser
 from faker import Faker
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.test import APIClient
 from records.serealizers import RecordCreateSerializer
 from groups.serealizers import GroupCreateSerializer
@@ -13,9 +12,11 @@ from groups.models import Group
 from accounts.models import User
 from datetime import datetime, timedelta
 import logging
+
 logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def create_record(request):
     quantity = request.data.get('quantity') if request.data.get('quantity') else 1
     fake = Faker(['pt_PT'])
@@ -129,6 +130,7 @@ def create_record(request):
     return Response({'success' : True, 'data': final_result}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def create_group_with_users(request):
     staff = request.data.get('staff') if request.data.get('staff') is not None else 1
     users = request.data.get('users') if request.data.get('users') is not None else 3
@@ -201,8 +203,8 @@ def create_group_with_users(request):
             Group.objects.filter(id = group_id).first().delete()
     return Response({'success' : True, 'data': created_users}, status=status.HTTP_200_OK)
 
-
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def create_templates(request):
     from django.core.cache import caches
 

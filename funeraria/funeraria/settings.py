@@ -112,6 +112,7 @@ DATABASES = {
         'ENGINE': 'djongo',
         'NAME':  'funeraria',
         'ENFORCE_SCHEMA': True,
+        'CONN_MAX_AGE': 3600*24,
         'CLIENT': {
             'host':  'mongodb+srv://funerariadigitaldoc:***REMOVED-MONGO-PASSWORD***@funerariamongo.jbar8li.mongodb.net/?retryWrites=true&w=majority'
         }

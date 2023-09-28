@@ -1,14 +1,13 @@
 import logging
-from template_logic.models import TemplateLogic
+from funeraria.permissions import IsAdminOrUpper
 from records.models import Record
 from django.core.cache import cache
 from datetime import datetime, timedelta
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from drf_yasg.utils import swagger_auto_schema
 from dateutil.relativedelta import relativedelta
-
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -16,6 +15,7 @@ logger = logging.getLogger(__name__)
     operation_description="get templates per day data"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def deaths_per_months(request, *args, **kwargs):
     months = int(request.query_params.get('months'))
     if months is None:
@@ -75,6 +75,7 @@ def deaths_per_months(request, *args, **kwargs):
     operation_description="get deaths per day data"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def deaths_per_day(request, *args, **kwargs):
     days_number = int(request.query_params.get('days'))
     if days_number is None:
@@ -130,6 +131,7 @@ def deaths_per_day(request, *args, **kwargs):
     operation_description="get deaths by district data"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def deaths_by_district(request, *args, **kwargs):
     days_number = int(request.query_params.get('days'))
     if days_number is None:
@@ -186,6 +188,7 @@ def deaths_by_district(request, *args, **kwargs):
     operation_description="get deaths by user data"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def deaths_by_user(request, *args, **kwargs):
     days_number = int(request.query_params.get('days'))
     if days_number is None:
@@ -243,6 +246,7 @@ def deaths_by_user(request, *args, **kwargs):
     operation_description="get current month services number"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def current_month_services(request, *args, **kwargs):
     cache_key = 'current_month_services'
     result = cache.get(cache_key)
@@ -262,6 +266,7 @@ def current_month_services(request, *args, **kwargs):
     operation_description="get current year services number"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def current_year_services(request, *args, **kwargs):
     cache_key = 'current_year_services'
     result = cache.get(cache_key)
@@ -281,6 +286,7 @@ def current_year_services(request, *args, **kwargs):
     operation_description="get best month"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAdminOrUpper])
 def best_month(request, *args, **kwargs):
     cache_key = 'best_month'
     result = cache.get(cache_key)

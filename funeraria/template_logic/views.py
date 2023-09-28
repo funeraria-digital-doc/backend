@@ -1,12 +1,11 @@
 import io
 import os
 from django.http import HttpResponse
+from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
-#, permission_classes
-#from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+#from rest_framework.permissions import permission_classes
 from template_logic.serealizers import SEND_TYPE_CHOICES
 from template_logic.validation_helper import *
 from template_logic.serealizers import UploadSerializer, EditUploadSerializer
@@ -14,14 +13,9 @@ from template_logic.models import TemplateLogic
 from records.models import Record
 from groups.models import Group
 from accounts.models import User
-#from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-# from rest_framework.parsers import MultiPartParser, JSONParser
-# from rest_framework.decorators import parser_classes
-from django.db import connection
 import logging
 from django.core.cache import cache
-from django.db import connection
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -29,8 +23,7 @@ logger = logging.getLogger(__name__)
     operation_description="List all templates"
 ) 
 @api_view(['GET'])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsSuperUser])
 def list_templates(request):    
     try:
         cache_key = 'all_templates'
@@ -74,35 +67,13 @@ def list_templates(request):
             return Response({'success' : False, 'data': ''}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-@api_view(['GET'])  
-def profile_view(request):
-    
-    query_log = connection.queries
-    logger.info(query_log)
-    # Print the query log
-    # for query in query_log:
-    #     logger.info(query)
-    return Response({'success' : True}, status=status.HTTP_200_OK)
-    # import cProfile
-    # import pstats
-
-    # # Run the view function with cProfile
-    # profiler = cProfile.Profile()
-    # profiler.runcall(list_templates, request)
-    # profiler.dump_stats('profile_data.txt')
-
-    # # Print the profiling data
-    # stats = pstats.Stats('profile_data.txt')
-    # stats.sort_stats('cumulative')
-    # stats.print_stats()
 
 @swagger_auto_schema(
     method='get',
     operation_description="Get all variables from a template"
 ) 
 @api_view(['GET'])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperUser])
 def get_variables(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('file').first()
     if template is None:
@@ -115,7 +86,7 @@ def get_variables(request, *args, **kwargs):
     operation_description="Get all variables from a file"
 ) 
 @api_view(['POST'])
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsSuperUser])
 def get_variables_from_file(request, *args, **kwargs):
     from docxtpl import DocxTemplate
     file = request.FILES.get('file')
@@ -132,7 +103,7 @@ def get_variables_from_file(request, *args, **kwargs):
     operation_description="Upload a document template"
 )    
 @api_view(['POST'])
-# @parser_classes([MultiPartParser])
+@permission_classes([IsSuperUser])
 def upload(request):
     dup = hasDuplicates(request.data.get('validations') if request.data.get('validations') is not None else [])
     if dup:
@@ -213,6 +184,7 @@ def editDocument(template, data, saveDocument):
     operation_description="Download a Template with all replaced variables from a registered death"
 ) 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def download(request, *args, **kwargs):
     if not TemplateLogic.objects.filter(id=kwargs.get('template_pk')).exists():
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
@@ -296,6 +268,7 @@ def download(request, *args, **kwargs):
     operation_description="Download a Template with all replaced variables from a registered death"
 ) 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def template_download(request, *args, **kwargs):
     template_file = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('file').first()
     try:
@@ -334,7 +307,7 @@ def getDbKeysToDoc(request, template, template_validations, changeVariablesObjec
     operation_description="Edit a template"
 )    
 @api_view(['POST'])
-#@parser_classes([MultiPartParser])
+@permission_classes([IsSuperUser])
 def edit(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(pk=kwargs.get('pk')).first()  
     if template is None:
@@ -380,6 +353,7 @@ def edit(request, *args, **kwargs):
     operation_description="Delete a Template"
 ) 
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def remove(request, *args, **kwargs):   
     try:
         TemplateLogic.objects.filter(id=kwargs.get('pk')).delete()
@@ -406,6 +380,7 @@ def get_doc_variables(template, getDoc, getVars):
     operation_description="Get Template Validations"
 ) 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def get_validations(request, *args, **kwargs):
     template_validations = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('validations')
     if template_validations is None:
@@ -421,6 +396,7 @@ def get_validations(request, *args, **kwargs):
     operation_description="Check Template Validations"
 ) 
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def check_validations(request, *args, **kwargs):
     template_validations = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('validations')
     if not template_validations:
@@ -435,6 +411,7 @@ def check_validations(request, *args, **kwargs):
     operation_description="Get Template"
 ) 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def get_template(request, *args, **kwargs):
     template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('id', 'title', 'group_id', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc', 'file', 'validations').first()
     if template is None:
@@ -449,6 +426,7 @@ def get_template(request, *args, **kwargs):
     operation_description="List group templates"
 ) 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def list_group_templates(request):
     if request.user is not None:
         user = User.objects.get(id=request.user.id)
@@ -489,6 +467,7 @@ def parse_object_pairs(pairs):
     return pairs
 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def sendTestMail(request):
     from django.core.mail import send_mail
     try:

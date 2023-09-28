@@ -2,10 +2,9 @@ import json
 from django.shortcuts import render
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
+#from rest_framework.permissions import permission_classes
 from rest_framework import status
-
-from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
-from rest_framework.decorators import parser_classes
+from rest_framework.permissions import IsAuthenticated
 from records.models import Record
 from records.serealizers import RecordCreateSerializer, RecordUpdateSerializer
 
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
     operation_description="Create a new Record"
 )    
 @api_view(['POST'])
-#@parser_classes([MultiPartParser])
+@permission_classes([IsAuthenticated])
 def create(request, *args, **kwargs):
     record = {}
     for requestPart in request.data:
@@ -50,6 +49,7 @@ def create(request, *args, **kwargs):
     operation_description="View details of a record"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def view(request, *args, **kwargs):
     record = Record.objects.filter(pk=kwargs.get('pk')).values().first()
     if record is None:
@@ -62,20 +62,16 @@ def view(request, *args, **kwargs):
     operation_description="Update a Record"
 )    
 @api_view(['POST'])
-# @parser_classes([MultiPartParser])
+@permission_classes([IsAuthenticated])
 def update(request, *args, **kwargs):
     recordInstance = Record.objects.filter(pk=kwargs.get('pk')).first() 
     record = request.data
-    # for requestFile in request.FILES:
-    #     record[requestFile] = request.FILES.get(requestFile)
-    logger.info(record)
-    logger.info(request.FILES)
     serializer = RecordUpdateSerializer(data = record,instance=recordInstance, partial=True)   
     if serializer.is_valid():
         if record is None:
                 return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
-            #serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
+            serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
             logger.info(serializer.data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
@@ -89,6 +85,7 @@ def update(request, *args, **kwargs):
     operation_description="Delete a record"
 ) 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def remove(request, *args, **kwargs):
     record = Record.objects.filter(id=kwargs.get('pk')).first()
     if record is None:
@@ -101,10 +98,14 @@ def remove(request, *args, **kwargs):
     operation_description="List all records"
 ) 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def list(request, *args, **kwargs):
-    records = Record.objects.all().values('id','name','family_member_phone','gender','group_id','email','status')
-    return Response(records, status = status.HTTP_200_OK)
-
+    if request.user.is_superuser:
+        records = Record.objects.all().values('id','name','family_member_phone','gender','group_id','email','status')
+        return Response(records, status = status.HTTP_200_OK)
+    else:
+        records = Record.objects.filter(group_id=request.user.group_user_id).values('id','name','family_member_phone','gender','group_id','email','status')
+        return Response(records, status = status.HTTP_200_OK)
 
 
         

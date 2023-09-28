@@ -14,7 +14,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
-from funeraria.permissions import IsAdmin, IsSuperUser, isEqualOrUpperPermission
+from funeraria.permissions import IsAdmin, IsAdminOrUpper, IsSuperUser, isEqualOrUpperPermission
 from django.db.models import F
 from django.core.cache import cache
 import logging
@@ -139,7 +139,7 @@ def logout(request):
 )
 @api_view(['GET'])
 #@authentication_classes([CachingTokenAuthentication])
-@permission_classes([IsAdmin])
+@permission_classes([IsAuthenticated])
 def profile(request): 
     user = {
         'id' : request.user.id,
@@ -204,21 +204,27 @@ def edit_profile(request, *args, **kwargs):
     operation_description="List all users"
 )
 @api_view(['GET'])
-@permission_classes([IsAdmin])
+@permission_classes([IsAdminOrUpper])
 def list_all_users(request):
-    cache_key = 'all_users'
-    users = cache.get(cache_key)
-    if not users:
-        logger.info('não tinha cache')
-        users = User.objects.all().annotate(
-            group=F('group_user_id')
-        ).values('id','is_superuser','username','email','is_staff','status','group')
-        cache.set(cache_key, users)
+    if(request.user.is_superuser):
+        cache_key = 'all_users'
+        users = cache.get(cache_key)
+        if not users:
+            logger.info('não tinha cache')
+            users = User.objects.all().annotate(
+                group=F('group_user_id')
+            ).values('id','is_superuser','username','email','is_staff','status','group')
+            cache.set(cache_key, users)
+        else:
+            cache.touch(cache_key)
     else:
-        cache.touch(cache_key)
+        users = User.objects.filter(group_user_id=request.user.group_user_id).annotate(
+                group=F('group_user_id')
+            ).values('id','is_superuser','username','email','is_staff','status','group')
     if users is None:
         return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
-    return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)   
+    return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)  
+
 
 
 @swagger_auto_schema(

@@ -1,14 +1,14 @@
 import logging
+from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view, permission_classes
 from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
 from groups.models import Group
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import JSONParser
 from django.core.cache import cache
-from datetime import datetime, timedelta
+from rest_framework.permissions import IsAuthenticated
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
     operation_description="Create a new Group"
 )    
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def create(request, *args, **kwargs):
     data = JSONParser().parse(request)
     serializer = GroupCreateSerializer(data=data)
@@ -39,7 +40,6 @@ def create(request, *args, **kwargs):
             return Response(group, status = status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         group['error']   = "erro no is_valid"
-        #raise serializer.errors
     return Response(group, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
@@ -47,6 +47,7 @@ def create(request, *args, **kwargs):
     operation_description="View details of a group"
 ) 
 @api_view(['GET'])
+@permission_classes([IsSuperUser])
 def view(request, *args, **kwargs):
     group = Group.objects.filter(pk=kwargs.get('pk')).values().first()
     if group is None:
@@ -59,6 +60,7 @@ def view(request, *args, **kwargs):
     operation_description="Update a Group"
 )    
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def update(request, *args, **kwargs):
     group = Group.objects.filter(pk=kwargs.get('pk')).first()  
     serializer = GroupUpdateSerializer(data = request.data,instance=group, partial=True)   
@@ -78,6 +80,7 @@ def update(request, *args, **kwargs):
     operation_description="Delete a group"
 ) 
 @api_view(['POST'])
+@permission_classes([IsSuperUser])
 def remove(request, *args, **kwargs):
     group = Group.objects.filter(id=kwargs.get('pk')).first()
     if group is None:
@@ -93,19 +96,23 @@ def remove(request, *args, **kwargs):
     operation_description="List all groups"
 ) 
 @api_view(['GET'])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def list(request, *args, **kwargs):
-    cache_key = 'all_groups'
-    groups = cache.get(cache_key)
-    if not groups:
-        logger.info('não tinha cache')
-        groups = Group.objects.all().values('id','name')
-        cache.set(cache_key, groups)
+    if request.user.is_superuser:
+        cache_key = 'all_groups'
+        groups = cache.get(cache_key)
+        if not groups:
+            logger.info('não tinha cache')
+            groups = Group.objects.all().values('id','name')
+            cache.set(cache_key, groups)
+        else:
+            cache.touch(cache_key)
+        return Response(groups, status = status.HTTP_200_OK)
+    elif request.user.group_user_id:
+        groups = Group.objects.filter(id=request.user.group_user_id).values('id','name')
+        return Response(groups, status = status.HTTP_200_OK)
     else:
-        cache.touch(cache_key)
-    #groups = Group.objects.all().values('id','name')
-    return Response(groups, status = status.HTTP_200_OK)
+        return Response(groups, status = status.HTTP_403_FORBIDDEN)
 
 
 
