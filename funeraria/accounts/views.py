@@ -44,10 +44,12 @@ def login(request):
         else:
             token = Token.objects.get_or_create(user=user)
             if token is not None and token[0] is not None:
+                logger.info(token[0].__dict__)
                 data = {
                     'name': user.username,
                     'email': user.email,
                     'token' : str(token[0]),
+                    'role' : getRole(user)
                     #'user_permissions': user.get_user_permissions(),
                     #'group_permissions': user.get_group_permissions()
                 }
@@ -144,7 +146,8 @@ def profile(request):
     user = {
         'id' : request.user.id,
         'name' : request.user.username,
-        'email' : request.user.email
+        'email' : request.user.email,
+        'role' : getRole(request.user)
     }
     if user: 
         return Response(user, status=status.HTTP_200_OK)
@@ -311,3 +314,11 @@ def edit_user(request, *args, **kwargs):
         else:
             return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
     return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
+
+def getRole(user):
+    role = 'user'
+    if user.is_superuser:
+        role = 'super'
+    elif user.is_staff:
+        role = 'staff'
+    return role
