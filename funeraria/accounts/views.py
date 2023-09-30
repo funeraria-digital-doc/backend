@@ -1,5 +1,4 @@
 from io import BytesIO
-
 from django.conf import settings
 from funeraria.authentication import CachingTokenAuthentication
 from rest_framework.decorators import api_view, permission_classes,authentication_classes
@@ -15,6 +14,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import parser_classes
 from funeraria.permissions import IsAdmin, IsAdminOrUpper, IsSuperUser, isEqualOrUpperPermission
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import F
 from django.core.cache import cache
 import logging
@@ -36,26 +36,18 @@ def login(request):
     username = request.data['username']
     password = request.data['password']
     if username and password:
-        # Try to authenticate the user using Django auth framework.
-        user = authenticate(request=request, username=username, password=password)
+        user = authenticate(username=username, password=password)
         if not user:
-            # If we don't have a regular user, raise a ValidationError
             return Response('Access denied: wrong email or password.',status=status.HTTP_401_UNAUTHORIZED)
         else:
-            token = Token.objects.get_or_create(user=user)
-            if token is not None and token[0] is not None:
-                logger.info(token[0].__dict__)
-                data = {
-                    'name': user.username,
-                    'email': user.email,
-                    'token' : str(token[0]),
-                    'role' : getRole(user)
-                    #'user_permissions': user.get_user_permissions(),
-                    #'group_permissions': user.get_group_permissions()
-                }
-                return Response(data,status=status.HTTP_200_OK) 
-            else :
-                return Response('error creating token',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            refresh = RefreshToken.for_user(user)
+            refresh['name']= user.username
+            refresh['email']= user.email
+            refresh['role']= getRole(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token)
+            },status=status.HTTP_200_OK)
     else:
         return Response('Both "username" and "password" are required.',status=status.HTTP_200_OK)
 
@@ -140,7 +132,6 @@ def logout(request):
     operation_description="Get user profile information"
 )
 @api_view(['GET'])
-#@authentication_classes([CachingTokenAuthentication])
 @permission_classes([IsAuthenticated])
 def profile(request): 
     user = {
@@ -160,17 +151,15 @@ def profile(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def profile_image(request): 
-    user_id = Token.objects.get(key=request.auth.key).user_id
-    if not user_id:
+    if not request.user:
         return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
-    file = User.objects.filter(id=Token.objects.get(key=request.auth.key).user_id).values('file').first()
-    if file.get('file'):
+    if request.user.file:
         user_data = {
-            'image' : file.get('file')
+            'image' : request.user.file
         }
     else:
         user_data = {
-            'image' : None
+            'image' :None
         }
     return Response(user_data, status=status.HTTP_200_OK)
     
@@ -180,15 +169,13 @@ def profile_image(request):
     operation_description="Edit a User profile"
 )    
 @api_view(['PATCH'])
-#@parser_classes([MultiPartParser])
 @permission_classes([IsAuthenticated])
 def edit_profile(request, *args, **kwargs):
-    user = Token.objects.get(key=request.auth).user
-    if user:
-        serializer = EditProfileSerializer(data = request.data,instance=user, partial=True)   
+    if request.user:
+        serializer = EditProfileSerializer(data = request.data,instance=request.user, partial=True)   
         if serializer.is_valid():
             try:            
-                serializer.update(instance = user, validated_data=serializer.validated_data)
+                serializer.update(instance = request.user, validated_data=serializer.validated_data)
                 return Response(serializer.data, status = status.HTTP_200_OK)
             except:
                 return Response(

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework_swagger',
     'rest_framework',
+    'rest_framework_simplejwt',
     'rest_framework.authtoken',
     'funeraria',
     'groups',
@@ -177,7 +178,8 @@ REST_FRAMEWORK = {
     # ),
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'funeraria.authentication.CachingTokenAuthentication',
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'funeraria.authentication.CachingTokenAuthentication'
         #'rest_framework.authentication.TokenAuthentication',
     ],
     
@@ -248,6 +250,20 @@ CACHES = {
         'LOCATION': 'funeraria',
         'TIMEOUT': 36400
     }
+}
+import datetime
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),  # Set your desired access token lifetime
+    'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),  # Set your desired refresh token lifetime
+    'SLIDING_TOKEN_LIFETIME': datetime.timedelta(days=30),  # Set your desired sliding token lifetime
+    'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=60),  # Set your desired sliding token refresh lifetime
+    'ROTATE_REFRESH_TOKENS': False,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer'),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 
