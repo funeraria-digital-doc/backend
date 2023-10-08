@@ -1,6 +1,3 @@
-from io import BytesIO
-from django.conf import settings
-from funeraria.authentication import CachingTokenAuthentication
 from rest_framework.decorators import api_view, permission_classes,authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -84,7 +81,6 @@ def change_password(request):
             user.save()
             return Response({'success': True},status=status.HTTP_200_OK) 
         except Exception as e:
-            logger.info(e)
             return Response('error changing password',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
             
 
@@ -112,7 +108,6 @@ def file_upload(request):
             serializer.update(instance = user, validated_data=serializer.validated_data)
             return Response({'success': True},status=status.HTTP_200_OK) 
         except Exception as e:
-            logger.info(str(e))
             return Response('error uploading profile image',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
     else:
         return Response({'error' : serializer.errors},status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
@@ -153,14 +148,9 @@ def profile(request):
 def profile_image(request): 
     if not request.user:
         return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
-    if request.user.file:
-        user_data = {
-            'image' : request.user.file
-        }
-    else:
-        user_data = {
-            'image' :None
-        }
+    user_data = {
+        'image' : request.user.file if request.user.file else None
+    }
     return Response(user_data, status=status.HTTP_200_OK)
     
 @swagger_auto_schema(
@@ -200,7 +190,6 @@ def list_all_users(request):
         cache_key = 'all_users'
         users = cache.get(cache_key)
         if not users:
-            logger.info('não tinha cache')
             users = User.objects.all().annotate(
                 group=F('group_user_id')
             ).values('id','is_superuser','username','email','is_staff','status','group')
@@ -208,9 +197,7 @@ def list_all_users(request):
         else:
             cache.touch(cache_key)
     else:
-        users = User.objects.filter(group_user_id=request.user.group_user_id).annotate(
-                group=F('group_user_id')
-            ).values('id','is_superuser','username','email','is_staff','status','group')
+        users = User.objects.filter(group_user_id=request.user.group_user_id).values('id','username','email','is_staff','status')
     if users is None:
         return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
     return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)  
@@ -224,36 +211,30 @@ def list_all_users(request):
 )    
 @api_view(['POST'])
 #@parser_classes([MultiPartParser])
-@permission_classes([IsAdmin])
+@permission_classes([IsAdminOrUpper])
 def create_new_user(request, *args, **kwargs): 
-    serializer = CreateUserSerializer(data=request.data)
+    serializer = CreateUserSerializer(data=request.data, context={'request': request})
     data = {}
     if serializer.is_valid():
         try:
-            user = User.objects.create_user(
-                username = serializer.validated_data['username'], 
-                email = serializer.validated_data['email'],
-                is_superuser = serializer.validated_data['is_superuser'],
-                is_staff = serializer.validated_data['is_staff'],
-                status = serializer.validated_data['status'] if serializer.validated_data['status'] else User.Status.ACTIVE,
-                group_user = serializer.validated_data['group_user'] if 'group_user' in serializer.validated_data else None,
-                password = '12345678'
-            ) 
+            serializer.save()
+            user = User.objects.filter(id=serializer.data.get('id')).first()
+            user.set_password("12345678")
+            user.save()
             data['response'] = "Registration Successful!"
-            data['id'] = user.id
-            data['username'] = user.username
-            data['email'] = user.email  
-            data['is_superuser'] = user.is_superuser
-            data['is_staff'] = user.is_staff
-            data['status'] = user.status
-            data['group'] = user.group_user.id if user.group_user is not None else None
+            data['id'] = serializer.data.get('id')
+            data['username'] = serializer.data.get('username')
+            data['email'] = serializer.data.get('email')  
+            data['is_staff'] = serializer.data.get('is_staff')
+            data['status'] = serializer.data.get('status')
+            if request.user and request.user.is_superuser:
+                data['is_superuser'] = serializer.data.get('is_superuser')
+                data['group'] = serializer.data.get('group_user') if serializer.data.get('group_user') is not None else None
             return Response(data, status=status.HTTP_201_CREATED)
         except Exception as error:
-            logger.info(error)
             return Response({'erro' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
     else:
         data = serializer.errors
-        logger.info(data)
         return Response({'erro' : data}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
     
 @swagger_auto_schema(
@@ -261,6 +242,7 @@ def create_new_user(request, *args, **kwargs):
     operation_description="Delete a user"
 ) 
 @api_view(['POST'])
+@permission_classes([IsAdminOrUpper])
 def remove(request, *args, **kwargs):
     user = User.objects.filter(id=kwargs.get('pk')).first()
     if user is None:
@@ -268,7 +250,7 @@ def remove(request, *args, **kwargs):
     try:
         user.delete()
     except Exception as e:
-        logger.info("Error deleting", e)
+        return Response({"error" : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return Response({"success" : "User deleted successfully!"}, status=status.HTTP_200_OK)
     
 @swagger_auto_schema(
@@ -277,24 +259,26 @@ def remove(request, *args, **kwargs):
     operation_description="Edit a User "
 )    
 @api_view(['POST'])
+@permission_classes([IsAdminOrUpper])
 #@parser_classes([MultiPartParser])
 #@permission_classes([isEqualOrUpperPermission])
 def edit_user(request, *args, **kwargs):
     user = User.objects.filter(id=kwargs['pk']).first()
     if user is not None:
-        serializer = EditUserSerializer(data = request.data, partial=True)   
+        serializer = EditUserSerializer(data = request.data, partial=True, context={'request': request})   
         if serializer.is_valid():
-            try:            
+            try:         
                 serializer.update(instance = user, validated_data=serializer.validated_data)
                 newUser = User.objects.filter(id=kwargs['pk']).first()
                 response = {}
                 response['id'] = newUser.id
-                response['is_superuser'] = newUser.is_superuser
                 response['username'] = newUser.username
                 response['email'] = newUser.email
                 response['is_staff'] = newUser.is_staff
                 response['status'] = newUser.status
-                response['group'] = user.group_user.id if user.group_user is not None else None
+                if request.user and request.user.is_superuser:
+                    response['is_superuser'] = newUser.is_superuser
+                    response['group'] = user.group_user.id if user.group_user is not None else None
                 return Response(response, status = status.HTTP_200_OK)
             except:
                 return Response({'error' : "something went wrong updating user","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)

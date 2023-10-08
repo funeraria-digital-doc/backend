@@ -24,7 +24,6 @@ def create(request, *args, **kwargs):
     record = {}
     for requestPart in request.data:
         record[requestPart] = request.data.get(requestPart)
-    logger.info(record)
     serializer = RecordCreateSerializer(data=record)
     finalRecord = {}
     try:
@@ -33,7 +32,6 @@ def create(request, *args, **kwargs):
                 serializer.save()
                 finalRecord['record']  = serializer.data
             except Exception as e:
-                print(e)
                 finalRecord['error']   = serializer.errors
                 return Response(finalRecord, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
         else: 
@@ -72,12 +70,10 @@ def update(request, *args, **kwargs):
                 return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
             serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
-            logger.info(serializer.data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
             return Response({'error' : "something went wrong updating record","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
-        logger.info(serializer.errors)
         return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
 
 @swagger_auto_schema(

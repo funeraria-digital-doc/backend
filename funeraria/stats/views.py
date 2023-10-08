@@ -23,7 +23,6 @@ def deaths_per_months(request, *args, **kwargs):
     cache_key = 'records_per_month_' + str(months)
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         now = datetime.now()
         days_ago = (now - relativedelta(months=(months-1))).replace(day=1)
         pipeline = [
@@ -64,7 +63,6 @@ def deaths_per_months(request, *args, **kwargs):
         result = [{'categories': date, 'data': data} for date, data in stats_dict.items()]
 
         result.sort(key=lambda x: x['categories'])
-        logger.info(result)
         cache.set(cache_key, result)
     else:
         cache.touch(cache_key)
@@ -83,7 +81,6 @@ def deaths_per_day(request, *args, **kwargs):
     cache_key = 'deaths_in_last_' + str(days_number)
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         days_ago = datetime.now() - timedelta(days=days_number)
         pipeline = [
             {
@@ -139,7 +136,6 @@ def deaths_by_district(request, *args, **kwargs):
     cache_key = 'deaths_by_district_in_last_' + str(days_number)
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         days_ago = datetime.now() - timedelta(days=days_number)
         districts = ['Aveiro','Beja','Braga','Bragança','Castelo Branco','Coimbra','Évora','Faro','Guarda','Leiria','Lisboa','Portalegre','Porto','Santarém','Setúbal','Viana do Castelo','Vila Real','Viseu']
         default_data = dict.fromkeys(districts, 0)
@@ -196,7 +192,6 @@ def deaths_by_user(request, *args, **kwargs):
     cache_key = 'deaths_by_user_in_last_' + str(days_number)
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         days_ago = datetime.now() - timedelta(days=days_number)
         pipeline = [
             {
@@ -251,11 +246,9 @@ def current_month_services(request, *args, **kwargs):
     cache_key = 'current_month_services'
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         now = datetime.now()
         days_ago = now.replace(day=1)  
         result = Record.objects.filter(death_date__gte=days_ago).count()
-        logger.info(result)
         cache.set(cache_key, result)
     else:
         cache.touch(cache_key)
@@ -271,11 +264,9 @@ def current_year_services(request, *args, **kwargs):
     cache_key = 'current_year_services'
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         now = datetime.now()
         days_ago = now.replace(day=1, month=1)  
         result = Record.objects.filter(death_date__gte=days_ago).count()
-        logger.info(result)
         cache.set(cache_key, result)
     else:
         cache.touch(cache_key)
@@ -291,7 +282,6 @@ def best_month(request, *args, **kwargs):
     cache_key = 'best_month'
     result = cache.get(cache_key)
     if not result:
-        logger.info('não tinha cache')
         days_ago = datetime.now().replace(day=1, month=1)
         pipeline = [
             {

@@ -267,8 +267,6 @@ class EditUploadSerializer(serializers.ModelSerializer):
                 validation_errors['optional'] = ['Field is required.']
             if not data_dict.get('name') or data_dict.get('name') == "":
                 validation_errors['name'] = ['Field is required.']
-            logger.info('default ')
-            logger.info(data_dict.get('default_value'))
             field_type= data_dict.get('field_type')
             is_field_custom= data_dict.get('is_field_custom')
             

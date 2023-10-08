@@ -29,7 +29,6 @@ def list_templates(request):
         cache_key = 'all_templates'
         templates = cache.get(cache_key)
         if not templates:
-            logger.info('não tinha cache')
             pipeline = [
                 {
                     '$addFields': {
@@ -125,12 +124,10 @@ def upload(request):
                 form.save()
                 return Response({'data' : form.data}, status=status.HTTP_200_OK)
             except Exception as e:
-                    logger.info(e)
                     return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
-        logger.info(e)
         return Response({'errors' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def editDocument(template, data, saveDocument):
@@ -276,7 +273,6 @@ def template_download(request, *args, **kwargs):
             return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
         return Response({'data': template_file.get('file')}, status=status.HTTP_200_OK)
     except Exception as error:
-        logger.info(error)
         return Response({'error': 'Error downloading'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record):
@@ -344,7 +340,6 @@ def edit(request, *args, **kwargs):
         except:
             return Response({'success' : False,"errors" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
-        logger.info(serializer.errors)
         return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
     
 

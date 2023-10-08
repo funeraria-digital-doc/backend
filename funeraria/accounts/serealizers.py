@@ -51,13 +51,23 @@ class ProfilePictureUploadSerializer(serializers.ModelSerializer):
 class CreateUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True,validators=[UniqueValidator(queryset=User.objects.all())])
     username = serializers.CharField(required=True,validators=[UniqueValidator(queryset=User.objects.all())])
-    status = serializers.ChoiceField(required=False, choices=User.Status.choices, default=User.Status.ACTIVE)
+    status = serializers.ChoiceField(required=False, allow_null = True, choices=User.Status.choices, default=User.Status.ACTIVE)
     is_staff = serializers.BooleanField(required=False)
     is_superuser = serializers.BooleanField(required=False)
     group_user = serializers.PrimaryKeyRelatedField(required = False, allow_null = True , queryset = Group.objects.all()) 
     class Meta:
         model = User
-        fields = ['username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user']
+        fields = ['id', 'username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user']
+    
+    def create(self, validated_data):
+        if validated_data['status'] is None:
+            validated_data['status'] = User.Status.ACTIVE
+        request = self.context.get('request')
+        if validated_data['group_user'] is None and request and request.user and request.user.group_user:
+            validated_data['group_user'] = request.user.group_user
+        elif validated_data['group_user'] is None and request.user and request.user.group_user is None:
+            raise ValidationError({'group': ['Campo funerária é obrigatório']})
+        return super(CreateUserSerializer, self).create(validated_data)
 
 class EditUserSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=True)
@@ -87,8 +97,8 @@ class EditUserSerializer(serializers.ModelSerializer):
                 if data_dict['email'] != user.email:
                     if User.objects.filter(email=data_dict['email'] ).first() is not None:
                         validation_errors['email'] = ['Email tem de ser único.']
-                if not data_dict['is_staff'] and not data_dict['is_superuser'] and data_dict['group_user'] is None :
-                    validation_errors['group'] = ['Campo funerária é obrigatório']
+                # if not data_dict['is_staff'] and not data_dict['is_superuser'] and data_dict['group_user'] is None :
+                #     validation_errors['group'] = ['Campo funerária é obrigatório']
             else: 
                 validation_errors['utilizador'] = ['Utilizador não encontrado']
         else : 
@@ -96,6 +106,14 @@ class EditUserSerializer(serializers.ModelSerializer):
         if validation_errors:
             raise ValidationError(validation_errors)
         return data
+    
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        if validated_data['group_user'] is None and request and request.user and request.user.group_user:
+            validated_data['group_user'] = request.user.group_user
+        elif validated_data['group_user'] is None and request.user and request.user.group_user is None:
+            raise ValidationError({'group': ['Campo funerária é obrigatório']})
+        return super(EditUserSerializer, self).update(instance, validated_data)
     
 
         

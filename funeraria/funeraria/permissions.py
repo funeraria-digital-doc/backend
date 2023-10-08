@@ -24,4 +24,14 @@ class isEqualOrUpperPermission(permissions.BasePermission):
                 return True
         return False
     
+# class SelfOrUpperRole(permissions.BasePermission):
+#     def has_permission(self, request, view):
+#         retrieved_user = User.objects.get(pk=view.kwargs.get('pk'))
+#         if retrieved_user is not None:
+#             if(request.user.is_superuser):
+#                 return True
+#             if(request.user.is_staff and not retrieved_user.is_superuser):
+#                 return True
+#         return False
+    
 

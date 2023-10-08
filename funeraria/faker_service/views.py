@@ -38,7 +38,6 @@ def create_record(request):
             users_from_group.append(userId.get('id'))
         created_by = random.choice(users_from_group) if len(users_from_group) > 0 else None
         client = APIClient()
-        logger.info('created_by ' + (str(created_by) if created_by is not None else 'none'))
         if created_by is not None:
             user = User.objects.filter(id=created_by).first()
             if user is not None:
@@ -111,19 +110,14 @@ def create_record(request):
         if serializer.is_valid():
             try:
                 if created_by is not None and user is not None:
-                    logger.info('save with user - ' + user.username + " - " + record_data.get('name'))
                     serializer.save(created_by=user, updated_by=user)
                     final_result.get('success').append(serializer.data)
                 else:
-                    logger.info('save no user')
                     final_result.get('error').append({'data': 'no user'}) 
                     quantity = quantity + 1               
             except Exception as e:
-                logger.info('save error')
-                logger.info(e)
                 final_result.get('error').append({'data': serializer.data})
         else:
-            logger.info('error')
             final_result.get('error').append(serializer.errors)
         quantity = quantity - 1
             

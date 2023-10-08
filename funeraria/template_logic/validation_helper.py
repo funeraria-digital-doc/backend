@@ -82,7 +82,6 @@ def validate_multiselect_field(data_key, errors, key, options, min, max):
 
 def validate_date_fields(data_key, errors, key, date_format):
     from datetime import datetime
-    logger.info(data_key)
     if type(data_key) is not str:
         errors[key] = "Date field must be a string"
     else:

@@ -102,7 +102,6 @@ def list(request, *args, **kwargs):
         cache_key = 'all_groups'
         groups = cache.get(cache_key)
         if not groups:
-            logger.info('não tinha cache')
             groups = Group.objects.all().values('id','name')
             cache.set(cache_key, groups)
         else:
