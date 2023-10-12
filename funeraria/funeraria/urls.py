@@ -39,5 +39,6 @@ urlpatterns = [
     path('records/', include('records.urls')),
     path('stats/', include('stats.urls')),
     path('faker/', include('faker_service.urls')),
+    path('record-templates/', include('record_templates.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui')
 ]

@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'records',
     'stats',
     'faker_service',
+    'record_templates',
     'drf_yasg',
     'corsheaders'
 ]

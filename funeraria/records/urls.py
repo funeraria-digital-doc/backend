@@ -1,5 +1,5 @@
 
-from django.urls import path, include
+from django.urls import path
 from records import views
 urlpatterns = [
     path('create/', views.create, name='create'),

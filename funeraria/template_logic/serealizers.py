@@ -155,7 +155,7 @@ class UploadSerializer(serializers.ModelSerializer):
                 if (data_dict.get('db_collection') == "RECORDS" and data_dict.get('db_field_reference') not in [f.name for f in Record._meta.get_fields()]) or (data_dict.get('db_collection') == "GROUPS" and data_dict.get('db_field_reference') not in [f.name for f in Group._meta.get_fields()]) or (data_dict.get('db_collection') == "USERS" and data_dict.get('db_field_reference') not in [f.name for f in User._meta.get_fields()]):
                     validation_errors['db_field_reference'] = ['O campo "Nome do campo" é obrigatório.']
             if data_dict.get('default_value') is not None and len(str(data_dict.get('default_value')).strip()) > 0:                 
-                prep_var_validation = [{"validations" : {"default_value":data}}]           
+                prep_var_validation = [{"validations" : {"default_value":data}}]      
                 result = run_template_validations(prep_var_validation,{'default_value' : data.get('default_value')}, "CREATE_TEAMPLATE")
                 if 'errors' in result and result.get('errors') is not None:
                     errors = result.get('errors')

@@ -235,58 +235,62 @@ def validate_integer_fields(data_key, errors, key, is_optional,min,max):
 def run_template_validations(template_validations, data, operation):
     errors = {}
     data_keys = data.keys() 
-    if template_validations[0] and 'validations' in template_validations[0].keys():
-        validations = dict(template_validations[0].get('validations'))
-        validation_keys = validations.keys()
-        if operation == "CHECK_VALIDATIONS":
-            check_for_not_acceptable_keys(data_keys,validation_keys,errors)
-        for key,validation in validations.items():
-            is_optional = validation.get('optional')
-            is_field_custom = validation.get('is_field_custom')
-            field_type = validation.get('field_type')
-            if operation == "CHECK_VALIDATIONS":
-                required_or_override(data_keys, key, is_optional, is_field_custom, errors)  
-            if key in data:
-                if field_type not in ["MULTISELECT", "RADIO", "DATE"] and  type(data[key]) is list:
-                    if(len(data[key]) > 1):
-                        errors[key] = "Demasiadas opções selecionadas"
-                        continue
-                    if(len(data[key]) == 0) : 
+    if operation == "DOWNLOAD":
+        validations = {item['name']: item for item in template_validations}
+    else:
+        if template_validations[0] and 'validations' in template_validations[0].keys():
+            validations = dict(template_validations[0].get('validations')) 
+        else:
+            validations = None
+    if operation == "CHECK_VALIDATIONS" or operation == "DOWNLOAD":
+        check_for_not_acceptable_keys(data_keys,validations.keys(),errors)
+    for key,validation in validations.items():
+        is_optional = validation.get('optional')
+        is_field_custom = validation.get('is_field_custom')
+        field_type = validation.get('field_type')
+        if operation == "CHECK_VALIDATIONS" or operation == "DOWNLOAD":
+            required_or_override(data_keys, key, is_optional, is_field_custom, errors)  
+        if key in data:
+            if field_type not in ["MULTISELECT", "RADIO", "DATE"] and  type(data[key]) is list:
+                if(len(data[key]) > 1):
+                    errors[key] = "Demasiadas opções selecionadas"
+                    continue
+                if(len(data[key]) == 0) : 
+                    data_key = ''
+                    # errors[key] = "Nenhuma opção selecionada"
+                    continue
+                data_key = data[key][0]
+            else:
+                data_key = data[key]
+            
+            if key in data_keys and is_field_custom:
+                if field_type in ["TEXT", "TEXTAREA"]:
+                    validate_text_fields(data_key, errors, key, is_optional,validation.get('min'),validation.get('max'))
+                if field_type == "EMAIL":
+                    validate_email_field(data_key, errors, key)
+                if field_type == "SELECT":
+                    validate_select_field(data_key, errors, key, validation.get('options'))
+                if field_type in ["MULTISELECT", "RADIO"]:
+                    validate_multiselect_field(data_key, errors, key, validation.get('options'), validation.get('min'), validation.get('max'))
+                if field_type in ["DATE", "DATETIME","TIME"]: 
+                    if key == 'default_value' and len(data_key) == 0:
                         data_key = ''
-                        # errors[key] = "Nenhuma opção selecionada"
-                        continue
-                    data_key = data[key][0]
-                else:
-                    data_key = data[key]
-                
-                if key in data_keys and is_field_custom:
-                    if field_type in ["TEXT", "TEXTAREA"]:
-                        validate_text_fields(data_key, errors, key, is_optional,validation.get('min'),validation.get('max'))
-                    if field_type == "EMAIL":
-                        validate_email_field(data_key, errors, key)
-                    if field_type == "SELECT":
-                        validate_select_field(data_key, errors, key, validation.get('options'))
-                    if field_type in ["MULTISELECT", "RADIO"]:
-                        validate_multiselect_field(data_key, errors, key, validation.get('options'), validation.get('min'), validation.get('max'))
-                    if field_type in ["DATE", "DATETIME","TIME"]: 
-                        if key == 'default_value' and len(data_key) == 0:
-                            data_key = ''
-                        elif key == 'default_value' and len(data_key) == 1:
-                            data_key = data_key[0]
-                        if data_key != '':
-                            validate_date_fields(data_key, errors, key, validation.get('format')) 
-                    if field_type == "YEAR":
-                        validate_year_field(data_key, errors, key)
-                    if field_type == "MONTH":
-                        validate_month_field(data_key, errors, key)
-                    if field_type == "DAY":
-                        validate_day_field(data_key, errors, key)
-                    if field_type in ["BOOLEAN", "CHECKBOX"]:
-                        validate_boolean_field(data_key, errors, key)
-                    if field_type == "INTEGER":
-                        validate_integer_fields(data_key, errors, key, is_optional,validation.get('min'),validation.get('max'))
-                else:
-                    errors[key] = "Não é permitido reescrever este campo"        
+                    elif key == 'default_value' and len(data_key) == 1:
+                        data_key = data_key[0]
+                    if data_key != '':
+                        validate_date_fields(data_key, errors, key, validation.get('format')) 
+                if field_type == "YEAR":
+                    validate_year_field(data_key, errors, key)
+                if field_type == "MONTH":
+                    validate_month_field(data_key, errors, key)
+                if field_type == "DAY":
+                    validate_day_field(data_key, errors, key)
+                if field_type in ["BOOLEAN", "CHECKBOX"]:
+                    validate_boolean_field(data_key, errors, key)
+                if field_type == "INTEGER":
+                    validate_integer_fields(data_key, errors, key, is_optional,validation.get('min'),validation.get('max'))
+            else:
+                errors[key] = "Não é permitido reescrever este campo"        
                     
     if errors:
         return {"valid": False, "errors": errors}

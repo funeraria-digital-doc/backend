@@ -14,6 +14,8 @@ from records.models import Record
 from groups.models import Group
 from accounts.models import User
 from drf_yasg.utils import swagger_auto_schema
+from docxtpl import DocxTemplate
+import base64
 import logging
 from django.core.cache import cache
 logger = logging.getLogger(__name__)
@@ -177,18 +179,18 @@ def editDocument(template, data, saveDocument):
 
 
 @swagger_auto_schema(
-    method='get',
+    method='post',
     operation_description="Download a Template with all replaced variables from a registered death"
 ) 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsSuperUser])
 def download(request, *args, **kwargs):
     if not TemplateLogic.objects.filter(id=kwargs.get('template_pk')).exists():
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
-    template_validations = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('validations')
-    template = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values().first()
+    template = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('id', 'file', 'validations', 'group_id', 'title').first()
     record = Record.objects.filter(id=kwargs.get('record_pk')).values().first()
-   
+    if record.get('group_id') != template.get('group_id'):
+         return Response({"error" : "O template não existe para esta declaração."}, status = status.HTTP_400_BAD_REQUEST)
     if record is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
     if request.data.get('to_send_option') not in dict(SEND_TYPE_CHOICES):
@@ -196,14 +198,14 @@ def download(request, *args, **kwargs):
     doc = {}
     doc_response = None
     if request.data.get('to_send_option') == "DOCUMENT" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
-        validate_data = run_template_validations(list(template_validations), request.data.get('data'), "CHECK_VALIDATIONS")
+        validate_data = run_template_validations(template.get('validations'), request.data.get('data'), "DOWNLOAD")
         if not validate_data.get('valid') :
             return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
         if validate_data.get('valid'):
             changeVariablesObject = {}
             keys_missing = []
             doc_variables = get_doc_variables(template, True, True)
-            getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record)
+            getDbKeysToDoc(request, template, template.get('validations'), changeVariablesObject, doc_variables, keys_missing, record)
             if len(keys_missing) > 0:
                 return Response({'sucess' : False, "keys_missing" :keys_missing }, status=status.HTTP_400_BAD_REQUEST)
             else:
@@ -218,6 +220,11 @@ def download(request, *args, **kwargs):
                 random_number = random.randint(1, 100000000)
                 response['Content-Disposition'] = 'attachment; filename='+template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx' 
                 doc_response = response
+                #save to record_templates
+                try:
+                    logger.info('saving to record_templates')
+                except Exception as e:
+                    logger.info('error saving to record_templates')
                 #return response
 
     if request.data.get('to_send_option') == "EMAIL" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
@@ -276,10 +283,12 @@ def template_download(request, *args, **kwargs):
         return Response({'error': 'Error downloading'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record):
+    logger.info(template_validations[0])
+    validations = {item['name']: item for item in template_validations}
     for variable in doc_variables['vars']:
             if variable in request.data.get('data'):
                 changeVariablesObject[variable] = request.data.get('data')[variable]
-    for key,validation in template_validations[0].get('validations').items():
+    for key,validation in validations.items():
         if not key in changeVariablesObject:
             if "is_field_custom" in validation and not validation.get("is_field_custom") and "db_collection" in validation:
                 if validation.get("db_collection") == "USERS":
@@ -292,10 +301,11 @@ def getDbKeysToDoc(request, template, template_validations, changeVariablesObjec
                     if validation.get("db_field_reference") in record:
                         changeVariablesObject[key] = record.get(validation.get("db_field_reference"))
         if not key in changeVariablesObject or changeVariablesObject == "" or changeVariablesObject == None:
-            if validation.get("optional"):
-                changeVariablesObject[key] = ""
-            else:
-                keys_missing.append(key)
+            keys_missing.append(key)
+            # if validation.get("optional"):
+            #     changeVariablesObject[key] = ""
+            # else:
+            #     keys_missing.append(key)
 
 @swagger_auto_schema(
     method='post',
@@ -357,8 +367,10 @@ def remove(request, *args, **kwargs):
         return Response({"success" : False, 'error' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 def get_doc_variables(template, getDoc, getVars):
-    from docxtpl import DocxTemplate
-    doc = DocxTemplate('media/' + template.get('file'))
+    base64_string = template.get('file').split(',')[1]
+    docx_bytes = base64.b64decode(base64_string)
+    byte_stream = io.BytesIO(docx_bytes)
+    doc = DocxTemplate(byte_stream)
     variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
     if getDoc and getVars:
         return {
