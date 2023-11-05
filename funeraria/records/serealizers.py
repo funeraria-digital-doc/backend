@@ -5,24 +5,24 @@ from rest_framework import serializers
 
 
 GENDER_CHOICES = (
-    ("WOMAN",'Woman'),
-    ("MALE",'Man'),
-    ("OTHER",'Other')
+    ("WOMAN",'Feminino'),
+    ("MALE",'Masculino'),
+    ("OTHER",'Outro')
 )
 
 MARITAL_STATUS_CHOICES = (
-    ("SINGLE",'Single'),
-    ("MARIED",'Maried'),
-    ("DIVORCED",'Divorced'),
-    ("WIDOWER",'Widower')
+    ("SINGLE",'Solteiro/a'),
+    ("MARIED",'Casado/a'),
+    ("DIVORCED",'Divorciado/a'),
+    ("WIDOWER",'Viúvo/a')
 )
 
 STATUS_CHOICES = (
-    ("INACTIVE",'Inactive'),
-    ("ACTIVE",'Active'),
-    ("PENDING",'Pending'),
-    ("COMPLETED",'Completed'),
-    ("ARCHIVED",'Archived')
+    ("INACTIVE",'Inativo'),
+    ("ACTIVE",'Ativo'),
+    ("PENDING",'Pendente'),
+    ("COMPLETED",'Terminado'),
+    ("ARCHIVED",'Arquivado')
 )
 
 class RecordCreateSerializer(serializers.ModelSerializer):

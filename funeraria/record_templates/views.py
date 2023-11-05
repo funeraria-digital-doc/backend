@@ -20,6 +20,6 @@ def get_record_templates(request, *args, **kwargs):
     record = Record.objects.filter(id=kwargs.get('pk')).values('group_id').first()
     if record is None:
         return Response({'success': False}, status=status.HTTP_404_NOT_FOUND) 
-    templates = TemplateLogic.objects.filter(group_id=record.get('group_id')).values('id', 'title', 'validations')
+    templates = TemplateLogic.objects.filter(group_id=record.get('group_id')).values('id', 'title', 'validations', 'send_type')
     return Response({'data': templates}, status = status.HTTP_200_OK)
 

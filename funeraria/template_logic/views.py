@@ -1,6 +1,6 @@
 import io
 import os
-from django.http import HttpResponse
+from template_logic.helpers.helper import  editDocument, get_doc_variables, getDbKeysToDoc, hasDuplicates
 from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
 from rest_framework import status
@@ -89,7 +89,6 @@ def get_variables(request, *args, **kwargs):
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def get_variables_from_file(request, *args, **kwargs):
-    from docxtpl import DocxTemplate
     file = request.FILES.get('file')
     if file:
         doc = DocxTemplate(file)
@@ -128,55 +127,10 @@ def upload(request):
             except Exception as e:
                     return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
+            logger.info(form.errors)
             return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({'errors' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-def editDocument(template, data, saveDocument):
-    from django.shortcuts import render
-    doc_variables = get_doc_variables(template, True, True)
-    if len(doc_variables['vars']) ==  0:
-        return Response({"error" : "No variables found"}, status = status.HTTP_404_NOT_FOUND)
-    not_found_keys = []
-    edited_keys_array = []
-    edited_keys = {}
-    char_remov = ["-"," "]
-    for key_var,var_key_text in enumerate(data):
-        if  var_key_text in doc_variables['vars']:
-            for key , paragraph in enumerate(doc_variables['doc'].paragraphs):
-                if '{{ ' + var_key_text + ' }}' in paragraph.text or '{{' + var_key_text + '}}' in paragraph.text:
-                    edited_value = data[var_key_text]
-                    for char in char_remov:
-                        if saveDocument:
-                            edited_keys[var_key_text] = '{{ ' + edited_value + ' }}'
-                        else:
-                            if type(edited_value) is str:
-                                edited_value = edited_value.replace(char, "_")
-                                edited_keys[var_key_text] = edited_value
-                            if type(edited_value) is list:
-                                edited_str = ""
-                                for edited in edited_value:
-                                    if edited_str == "":
-                                        edited_str = edited
-                                    else:
-                                        edited_str += ", " + edited
-
-                                edited_keys[var_key_text] = edited_str
-                    edited_keys_array.append(var_key_text)
-        else : 
-            not_found_keys.append(var_key_text)
-
-    not_used_vars = []
-    for doc_var in doc_variables['vars']:
-        if doc_var not in edited_keys_array:
-            not_used_vars.append(doc_var)
-            edited_keys[doc_var] = '{{ ' + doc_var + ' }}'
-    if len(edited_keys_array) > 0 :
-        doc_variables['doc'].render(context=edited_keys)
-        if saveDocument:
-            doc_variables['doc'].save('media/' + template.get('file'))
-    return {'not_found_keys' : not_found_keys, 'edited_keys' : edited_keys_array, "doc" : doc_variables['doc']}
-
 
 @swagger_auto_schema(
     method='post',
@@ -196,12 +150,12 @@ def download(request, *args, **kwargs):
     if request.data.get('to_send_option') not in dict(SEND_TYPE_CHOICES):
         return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)   
     doc = {}
-    doc_response = None
+    doc_response = {}
     if request.data.get('to_send_option') == "DOCUMENT" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
-        validate_data = run_template_validations(template.get('validations'), request.data.get('data'), "DOWNLOAD")
-        if not validate_data.get('valid') :
+        validate_data = run_template_validations(template.get('validations'), request.data.get('validations'), "DOWNLOAD")
+        if not validate_data.get('success') :
             return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
-        if validate_data.get('valid'):
+        if validate_data.get('success'):
             changeVariablesObject = {}
             keys_missing = []
             doc_variables = get_doc_variables(template, True, True)
@@ -215,11 +169,8 @@ def download(request, *args, **kwargs):
                 buffer = io.BytesIO()
                 document.save(buffer)
                 buffer.seek(0)
-                response = HttpResponse(buffer.read(),content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                import random
-                random_number = random.randint(1, 100000000)
-                response['Content-Disposition'] = 'attachment; filename='+template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx' 
-                doc_response = response
+                base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                doc_response['file'] = base64_data
                 #save to record_templates
                 try:
                     logger.info('saving to record_templates')
@@ -256,6 +207,8 @@ def download(request, *args, **kwargs):
                 buffer = io.BytesIO()
                 doc.save(buffer)
                 buffer.seek(0)
+                import random
+                random_number = random.randint(1, 100000000)
                 email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
                 #email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', doc)
             email.send()
@@ -264,7 +217,7 @@ def download(request, *args, **kwargs):
             print(e)
 
     if doc_response:
-        return doc_response
+        return Response(doc_response, status=status.HTTP_200_OK)
     return Response({'errors' : "Not Found"}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
@@ -281,31 +234,6 @@ def template_download(request, *args, **kwargs):
         return Response({'data': template_file.get('file')}, status=status.HTTP_200_OK)
     except Exception as error:
         return Response({'error': 'Error downloading'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-def getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record):
-    logger.info(template_validations[0])
-    validations = {item['name']: item for item in template_validations}
-    for variable in doc_variables['vars']:
-            if variable in request.data.get('data'):
-                changeVariablesObject[variable] = request.data.get('data')[variable]
-    for key,validation in validations.items():
-        if not key in changeVariablesObject:
-            if "is_field_custom" in validation and not validation.get("is_field_custom") and "db_collection" in validation:
-                if validation.get("db_collection") == "USERS":
-                    changeVariablesObject[key] = getattr(request.user, validation.get("db_field_reference"), "")
-                if validation.get("db_collection") == "GROUPS":
-                    group = Group.objects.filter(id= template.get('group_id')).values(validation.get("db_field_reference")).first()
-                    if validation.get("db_field_reference") in group:
-                        changeVariablesObject[key] = group.get(validation.get("db_field_reference"))
-                if validation.get("db_collection") == "RECORDS":
-                    if validation.get("db_field_reference") in record:
-                        changeVariablesObject[key] = record.get(validation.get("db_field_reference"))
-        if not key in changeVariablesObject or changeVariablesObject == "" or changeVariablesObject == None:
-            keys_missing.append(key)
-            # if validation.get("optional"):
-            #     changeVariablesObject[key] = ""
-            # else:
-            #     keys_missing.append(key)
 
 @swagger_auto_schema(
     method='post',
@@ -352,7 +280,6 @@ def edit(request, *args, **kwargs):
     else:
         return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
     
-
 @swagger_auto_schema(
     method='post',
     operation_description="Delete a Template"
@@ -365,22 +292,6 @@ def remove(request, *args, **kwargs):
         return Response({"success" : True}, status=status.HTTP_204_NO_CONTENT)
     except Exception as error:
         return Response({"success" : False, 'error' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-def get_doc_variables(template, getDoc, getVars):
-    base64_string = template.get('file').split(',')[1]
-    docx_bytes = base64.b64decode(base64_string)
-    byte_stream = io.BytesIO(docx_bytes)
-    doc = DocxTemplate(byte_stream)
-    variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
-    if getDoc and getVars:
-        return {
-            'vars' : variables,
-            'doc' : doc
-        }
-    if getDoc:
-         return doc
-    if getVars:
-        return variables
 
 @swagger_auto_schema(
     method='get',
@@ -396,7 +307,6 @@ def get_validations(request, *args, **kwargs):
         return Response({"success" : True,"data" : template_validations}, status=status.HTTP_200_OK)
     except:
         return Response({"success" : False}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @swagger_auto_schema(
     method='post',
@@ -457,21 +367,6 @@ def list_group_templates(request):
             else:
                 return Response({'error' : 'User is not assigned to group'}, status=status.HTTP_400_BAD_REQUEST)
     return Response({'error' : 'Invalid user'}, status=status.HTTP_400_BAD_REQUEST)
-
-def hasDuplicates(validations):
-    seen = set()
-    duplicatedKeys = []
-    for validation in validations:
-       
-        if validation['name'] not in seen:
-            duplicatedKeys.append(validation['name'])
-            seen.add(validation['name'])
-        else:
-            return Response({"errors" : {'validations' : "Duplicate keys in validations field", 'keys' : duplicatedKeys}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return False
-
-def parse_object_pairs(pairs):
-    return pairs
 
 @api_view(['GET'])
 @permission_classes([IsSuperUser])

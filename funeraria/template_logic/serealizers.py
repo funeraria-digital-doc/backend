@@ -32,10 +32,10 @@ FIELD_TYPE_CHOICES =(
 FORMAT_CHOICES = (
     ("HOURS_ONLY",'Hours only'), 
     ("MINUTES_ONLY",'Minutes only'), 
-    ("SECONDS_ONLY",'Seconds only'), 
+    #("SECONDS_ONLY",'Seconds only'), 
     ("HOURS_MINUTES_SECONDS",'Hours, minutes and seconds'), 
     ("HOURS_MINUTES",'Hours and minutes'), 
-    ("MINUTES_SECONDS",'Minutes and seconds'), 
+    #("MINUTES_SECONDS",'Minutes and seconds'), 
     ("DAY_MONTH_YEAR",'Day, month and year'),  
     ("MONTH_YEAR",'Month and year'),
     ("DAY_MONTH",'Day and Month'),
@@ -143,7 +143,7 @@ class UploadSerializer(serializers.ModelSerializer):
             #     validation_errors['format'] = ['When field_type is TIME, format can be HOURS_ONLY, MINUTES_ONLY, SECONDS_ONLY, HOURS_MINUTES_SECONDS, HOURS_MINUTES or MINUTES_SECONDS.']
             # if field_type in ["DATETIME"] and data_dict.get('format') not in ["DAY_MONTH_YEAR_HOUR_MINUTE_SECOND","DAY_MONTH_YEAR_HOUR_MINUTE","DAY_MONTH_YEAR_HOUR","DAY_MONTH_HOUR_MINUTE_SECOND","DAY_MONTH_HOUR_MINUTE","DAY_MONTH_HOUR","MONTH_YEAR_HOUR_MINUTE_SECOND","MONTH_YEAR_HOUR_MINUTE","MONTH_YEAR_HOUR"]:
             #     validation_errors['format'] = ['When field_type is DATETIME, format can be DAY_MONTH_YEAR_HOUR_MINUTE_SECOND, DAY_MONTH_YEAR_HOUR_MINUTE, DAY_MONTH_YEAR_HOUR, DAY_MONTH_HOUR_MINUTE_SECOND, DAY_MONTH_HOUR_MINUTE, DAY_MONTH_HOUR, MONTH_YEAR_HOUR_MINUTE_SECOND, MONTH_YEAR_HOUR_MINUTE, MONTH_YEAR_HOUR.']
-            if field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or len(data_dict.get('options')) == 0):
+            if data_dict.get('is_field_custom') and field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or len(data_dict.get('options')) == 0):
                 validation_errors['options'] = ['O campo "Opções" é obrigatório.']
             if field_type in ["SELECT","MULTISELECT", "RADIO"] and data_dict.get('optional') and ('min' not in data_keys or data_dict.get('min') == 0):
                 validation_errors['min'] = ['O campo "mínimo" é obrigatório.']
@@ -154,7 +154,7 @@ class UploadSerializer(serializers.ModelSerializer):
             if data_dict.get('is_field_custom') and 'db_field_reference' in data_keys and data_dict.get('db_field_reference') and 'db_collection' in data_keys and data_dict.get('db_collection'):
                 if (data_dict.get('db_collection') == "RECORDS" and data_dict.get('db_field_reference') not in [f.name for f in Record._meta.get_fields()]) or (data_dict.get('db_collection') == "GROUPS" and data_dict.get('db_field_reference') not in [f.name for f in Group._meta.get_fields()]) or (data_dict.get('db_collection') == "USERS" and data_dict.get('db_field_reference') not in [f.name for f in User._meta.get_fields()]):
                     validation_errors['db_field_reference'] = ['O campo "Nome do campo" é obrigatório.']
-            if data_dict.get('default_value') is not None and len(str(data_dict.get('default_value')).strip()) > 0:                 
+            if data_dict.get('default_value') is not None and ((isinstance(data_dict.get('default_value'), list) and len(data_dict.get('default_value')) > 0) or (isinstance(data_dict.get('default_value'), str) and len(str(data_dict.get('default_value')).strip()) > 0)):                
                 prep_var_validation = [{"validations" : {"default_value":data}}]      
                 result = run_template_validations(prep_var_validation,{'default_value' : data.get('default_value')}, "CREATE_TEAMPLATE")
                 if 'errors' in result and result.get('errors') is not None:
@@ -187,7 +187,7 @@ class UploadSerializer(serializers.ModelSerializer):
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
-    file = serializers.CharField(required = False,allow_null = True, max_length = 100000)
+    file = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
 
     def validate(self,data):
         data_dict = dict(data)
@@ -280,7 +280,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
             #     validation_errors['format'] = ['When field_type is TIME, format can be HOURS_ONLY, MINUTES_ONLY, SECONDS_ONLY, HOURS_MINUTES_SECONDS, HOURS_MINUTES or MINUTES_SECONDS.']
             # if field_type in ["DATETIME"] and data_dict.get('format') not in ["DAY_MONTH_YEAR_HOUR_MINUTE_SECOND","DAY_MONTH_YEAR_HOUR_MINUTE","DAY_MONTH_YEAR_HOUR","DAY_MONTH_HOUR_MINUTE_SECOND","DAY_MONTH_HOUR_MINUTE","DAY_MONTH_HOUR","MONTH_YEAR_HOUR_MINUTE_SECOND","MONTH_YEAR_HOUR_MINUTE","MONTH_YEAR_HOUR"]:
             #     validation_errors['format'] = ['When field_type is DATETIME, format can be DAY_MONTH_YEAR_HOUR_MINUTE_SECOND, DAY_MONTH_YEAR_HOUR_MINUTE, DAY_MONTH_YEAR_HOUR, DAY_MONTH_HOUR_MINUTE_SECOND, DAY_MONTH_HOUR_MINUTE, DAY_MONTH_HOUR, MONTH_YEAR_HOUR_MINUTE_SECOND, MONTH_YEAR_HOUR_MINUTE, MONTH_YEAR_HOUR.']
-            if field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or data_dict.get('options') is None):
+            if data_dict.get('is_field_custom') and field_type in ["SELECT","MULTISELECT", "RADIO"] and ('options' not in data_keys or data_dict.get('options') is None):
                 validation_errors['options'] = ['O campo "Opções" é obrigatório.']
             if field_type in ["SELECT","MULTISELECT", "RADIO"] and data_dict.get('optional') and ('min' not in data_keys or data_dict.get('min') == 0):
                 validation_errors['min'] = ['Quando o campo é de opções, multiplas opções o campo "Minimo" não pode ser 0']
@@ -291,7 +291,8 @@ class EditUploadSerializer(serializers.ModelSerializer):
             if data_dict.get('is_field_custom') and 'db_field_reference' in data_keys and data_dict.get('db_field_reference') and 'db_collection' in data_keys and data_dict.get('db_collection'):
                 if (data_dict.get('db_collection') == "RECORDS" and data_dict.get('db_field_reference') not in [f.name for f in Record._meta.get_fields()]) or (data_dict.get('db_collection') == "GROUPS" and data_dict.get('db_field_reference') not in [f.name for f in Group._meta.get_fields()]) or (data_dict.get('db_collection') == "USERS" and data_dict.get('db_field_reference') not in [f.name for f in User._meta.get_fields()]):
                     validation_errors['db_field_reference'] = ['O campo "Nome do campo" é inválido.']
-            if data_dict.get('default_value') is not None and len(str(data_dict.get('default_value')).strip()) > 0:                 
+            #se vier array ele conta o length como 2 quando se transforma em string 
+            if data_dict.get('default_value') is not None and ((isinstance(data_dict.get('default_value'), list) and len(data_dict.get('default_value')) > 0) or (isinstance(data_dict.get('default_value'), str) and len(str(data_dict.get('default_value')).strip()) > 0)):              
                 prep_var_validation = [{"validations" : {"default_value":data}}]           
                 result = run_template_validations(prep_var_validation,{'default_value' : data.get('default_value')}, "CREATE_TEAMPLATE")
                 if 'errors' in result and result.get('errors') is not None:
@@ -324,7 +325,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
-    file = serializers.CharField(required = False,allow_null = True, max_length = 100000)
+    file = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
 
     def validate(self,data):
         data_dict = dict(data)

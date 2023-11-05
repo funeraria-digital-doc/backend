@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 cache_keys = ['all_templates']
 class TemplateLogic(models.Model):
     title = models.CharField(max_length=255, null=True)
-    file = models.CharField(max_length=100000, null=True)
+    file = models.CharField(max_length=10000000, null=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
     validations = models.JSONField()
     send_type = models.CharField(max_length=255,null=True, blank=True, default="NONE")

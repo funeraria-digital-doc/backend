@@ -139,7 +139,7 @@ def validate_date_fields(data_key, errors, key, date_format):
                 errors[key] = "Value must be between 0 and 23"
         if date_format == "MINUTES_ONLY":
             try:
-                if int(data_key) < 0 or int(data_key) > 23:
+                if int(data_key) < 0 or int(data_key) > 59:
                     errors[key] = "Invalid Minutes. Must be between 0 and 59"
             except ValueError as e:
                 errors[key] = "Value must be between 0 and 59"
@@ -293,6 +293,6 @@ def run_template_validations(template_validations, data, operation):
                 errors[key] = "Não é permitido reescrever este campo"        
                     
     if errors:
-        return {"valid": False, "errors": errors}
+        return {"success": False, "errors": errors}
     else:
-        return {"valid": True, "errors": errors}
+        return {"success": True, "errors": errors}
