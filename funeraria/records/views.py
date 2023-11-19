@@ -24,21 +24,25 @@ def create(request, *args, **kwargs):
     record = {}
     for requestPart in request.data:
         record[requestPart] = request.data.get(requestPart)
+    logger.info(request.user.__dict__)
+    record['group'] = request.user.group_user_id if request.user.group_user_id else None
     serializer = RecordCreateSerializer(data=record)
     finalRecord = {}
+    
     try:
         if serializer.is_valid():
             try:
                 serializer.save()
                 finalRecord['record']  = serializer.data
             except Exception as e:
-                finalRecord['error']   = serializer.errors
-                return Response(finalRecord, status=status.HTTP_500_INTERNAL_SERVER_ERROR)            
+                finalRecord['errors']   = serializer.errors
+                return Response(finalRecord, status=status.HTTP_400_BAD_REQUEST)            
         else: 
-            finalRecord['error'] = serializer.errors
-            return Response(finalRecord, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+            logger.info(serializer.errors) 
+            finalRecord['errors'] = serializer.errors
+            return Response(finalRecord, status=status.HTTP_400_BAD_REQUEST)    
     except Exception as e:
-        finalRecord['error']   = "erro no is_valid"
+        finalRecord['errors']   = "erro no is_valid"
         #raise serializer.errors
     return Response(finalRecord, status = status.HTTP_200_OK)
 
@@ -51,7 +55,7 @@ def create(request, *args, **kwargs):
 def view(request, *args, **kwargs):
     record = Record.objects.filter(pk=kwargs.get('pk')).values().first()
     if record is None:
-        return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
+        return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
     return Response(record, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
@@ -67,14 +71,14 @@ def update(request, *args, **kwargs):
     serializer = RecordUpdateSerializer(data = record,instance=recordInstance, partial=True)   
     if serializer.is_valid():
         if record is None:
-                return Response({"error" : "Record does not exist!"}, status = status.HTTP_404_NOT_FOUND)
+                return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
         try:            
             serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
-            return Response({'error' : "something went wrong updating record","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+            return Response({'errors' : "Algo correu mal a atualizar a declaração","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
-        return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
+        return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
 
 @swagger_auto_schema(
     method='post',
@@ -85,9 +89,9 @@ def update(request, *args, **kwargs):
 def remove(request, *args, **kwargs):
     record = Record.objects.filter(id=kwargs.get('pk')).first()
     if record is None:
-        return Response({"error" : "Record does not exist!"},status=status.HTTP_404_NOT_FOUND)
+        return Response({"errors" : "Declaração não existe!"},status=status.HTTP_404_NOT_FOUND)
     record.delete()
-    return Response({"success" : "Record deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"success" : "Declaração eliminada com sucesso!"}, status=status.HTTP_204_NO_CONTENT)
 
 @swagger_auto_schema(
     method='get',
@@ -104,7 +108,21 @@ def list(request, *args, **kwargs):
         return Response(records, status = status.HTTP_200_OK)
 
 
-        
+@swagger_auto_schema(
+    method='post',
+    operation_description="Update records status to arquived"
+) 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def updateManyStatus(request, *args, **kwargs):
+    ids = request.data
+    try:
+        Record.objects.filter(id__in=ids).update(status="ARCHIVED")
+        return Response({"success" : True, "message":"Declarações alteradas com sucesso!"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.info(e) 
+        return Response({"success" : False, "errors" : "Erro ao atualizar declarações!"}, status=status.HTTP_400_BAD_REQUEST)
+       
 
 
 

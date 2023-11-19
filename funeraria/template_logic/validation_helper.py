@@ -45,7 +45,7 @@ def validate_select_field(data_key, errors, key, options):
             if data_key == option:
                 has_key = True
         if not has_key:
-            errors[key] = "Option " + str(data_key) + " is not valid"
+            errors[key] = "Campo obrigatório."
 
 def validate_multiselect_field(data_key, errors, key, options, min, max):
     if options is None or len(options) == 0:
@@ -244,6 +244,7 @@ def run_template_validations(template_validations, data, operation):
             validations = None
     if operation == "CHECK_VALIDATIONS" or operation == "DOWNLOAD":
         check_for_not_acceptable_keys(data_keys,validations.keys(),errors)
+    
     for key,validation in validations.items():
         is_optional = validation.get('optional')
         is_field_custom = validation.get('is_field_custom')

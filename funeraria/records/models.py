@@ -13,15 +13,16 @@ class Record(models.Model):
     updated_by = CurrentUserField(related_name='record_updated_by',on_update=True)
     
     email = models.EmailField(max_length=32, db_column='email', null=True, blank=True) 
-    status = models.CharField(max_length=64,  db_column='status', null=True, blank=True)  
+    status = models.CharField(max_length=64,  db_column='status', null=True, blank=True, default="ACTIVE")  
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
     
-    photo = models.CharField(max_length=100000, null=True)
+    photo = models.CharField(max_length=10000000, null=True)
     name = models.CharField(max_length=255,unique=True, db_column='name') 
     gender = models.CharField(max_length=64, db_column='gender') 
     marital_status = models.CharField(max_length=64,  db_column='marital_status', null=True, blank=True) 
     cc = models.CharField(max_length=16, db_column='cc', null=True, blank=True) 
+    cc_valid_until = models.DateField(db_column='cc_valid_until', null=True, blank=True)
     nif = models.CharField(max_length=16, db_column='nif', null=True, blank=True) 
     niss = models.CharField(max_length=16, db_column='niss', null=True, blank=True) 
     birthday = models.DateField(db_column='birthday', null=True, blank=True) 

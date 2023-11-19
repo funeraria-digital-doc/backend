@@ -251,7 +251,7 @@ CACHES = {
         'LOCATION': 'funeraria',
         'TIMEOUT': 36400
     }
-}
+}   
 import datetime
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),  # Set your desired access token lifetime

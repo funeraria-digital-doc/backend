@@ -2,7 +2,8 @@ from rest_framework import serializers
 from records.models import Record
 from rest_framework.validators import UniqueValidator
 from rest_framework import serializers
-
+import logging
+logger = logging.getLogger(__name__)
 
 GENDER_CHOICES = (
     ("WOMAN",'Feminino'),
@@ -26,11 +27,11 @@ STATUS_CHOICES = (
 )
 
 class RecordCreateSerializer(serializers.ModelSerializer):
-
+    
     gender = serializers.ChoiceField(choices = GENDER_CHOICES)
     spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, allow_null = True)
     marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES)
-    status = serializers.ChoiceField(choices = STATUS_CHOICES)
+    status = serializers.ChoiceField(choices = STATUS_CHOICES, required = False)
     class Meta:
         model = Record
         fields = '__all__'
@@ -40,18 +41,17 @@ class RecordCreateSerializer(serializers.ModelSerializer):
                 'validators': [
                     UniqueValidator(
                         queryset=Record.objects.all(),
-                        message= "Name must be unique"
+                        message= "Nome deve ser único"
                     )
                 ]
             }
         }
 
-
 class RecordUpdateSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(required = False)
     name = serializers.CharField(required = False)
     gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False)
-    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False)
+    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False, allow_null = True)
     marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES, required = False)
     status = serializers.ChoiceField(choices = STATUS_CHOICES, required = False)
     class Meta:
@@ -63,7 +63,7 @@ class RecordUpdateSerializer(serializers.ModelSerializer):
                 'validators': [
                     UniqueValidator(
                         queryset=Record.objects.all(),
-                        message= "Name must be unique"
+                        message= "Nome deve ser único"
                     )
                 ]
             }

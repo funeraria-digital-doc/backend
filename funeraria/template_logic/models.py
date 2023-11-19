@@ -10,6 +10,7 @@ class TemplateLogic(models.Model):
     file = models.CharField(max_length=10000000, null=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
     validations = models.JSONField()
+    file_validations = models.JSONField()
     send_type = models.CharField(max_length=255,null=True, blank=True, default="NONE")
     send_email_to = models.JSONField()
     send_email_to_cc = models.JSONField()

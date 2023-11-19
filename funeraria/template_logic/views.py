@@ -1,9 +1,11 @@
 import io
+import json
 import os
 from template_logic.helpers.helper import  editDocument, get_doc_variables, getDbKeysToDoc, hasDuplicates
 from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 #from rest_framework.permissions import permission_classes
 from template_logic.serealizers import SEND_TYPE_CHOICES
@@ -18,6 +20,7 @@ from docxtpl import DocxTemplate
 import base64
 import logging
 from django.core.cache import cache
+import zipfile
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -92,8 +95,22 @@ def get_variables_from_file(request, *args, **kwargs):
     file = request.FILES.get('file')
     if file:
         doc = DocxTemplate(file)
+        archive = zipfile.ZipFile(file)
+        file_variables = []
+        for file in archive.filelist:
+            # Check if the file is in the 'word/media' directory
+            if file.filename.startswith('word/media/'):
+                image_name_with_extension = file.filename.replace('word/media/', '')
+                image_name = image_name_with_extension.split('.')[0]
+                img_data = archive.read(file)
+                file_variables.append({
+                    'name': image_name,
+                    'name_with_extension': image_name_with_extension,
+                    'image_data': base64.b64encode(img_data).decode('utf-8')
+                })
+                
         variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
-        return Response({'success': True, 'variables':variables}, status = status.HTTP_200_OK)
+        return Response({'success': True, 'variables':variables, 'file_variables': file_variables}, status = status.HTTP_200_OK)
     else:
         return Response({'success': False,'error' : 'No file provided'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -113,6 +130,7 @@ def upload(request):
         'group' : request.data.get('group_id'),
         'file' : request.data.get('file'),
         'validations' : request.data.get('validations') if request.data.get('validations') is not None else [],
+        'file_validations' : request.data.get('file_validations') if request.data.get('file_validations') is not None else [],
         'send_type' : request.data.get('send_type') if request.data.get('send_type') is not None else 'NONE',
         'send_email_to' : request.data.get('send_email_to') if request.data.get('send_email_to') else [],
         'send_email_to_cc' : request.data.get('send_email_to_cc') if request.data.get('send_email_to_cc') else [],
@@ -125,7 +143,7 @@ def upload(request):
                 form.save()
                 return Response({'data' : form.data}, status=status.HTTP_200_OK)
             except Exception as e:
-                    return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.info(form.errors)
             return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -137,11 +155,11 @@ def upload(request):
     operation_description="Download a Template with all replaced variables from a registered death"
 ) 
 @api_view(['POST'])
-@permission_classes([IsSuperUser])
+@permission_classes([IsAuthenticated])
 def download(request, *args, **kwargs):
     if not TemplateLogic.objects.filter(id=kwargs.get('template_pk')).exists():
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
-    template = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('id', 'file', 'validations', 'group_id', 'title').first()
+    template = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('id', 'file', 'validations', 'file_validations', 'group_id', 'title').first()
     record = Record.objects.filter(id=kwargs.get('record_pk')).values().first()
     if record.get('group_id') != template.get('group_id'):
          return Response({"error" : "O template não existe para esta declaração."}, status = status.HTTP_400_BAD_REQUEST)
@@ -163,7 +181,7 @@ def download(request, *args, **kwargs):
             if len(keys_missing) > 0:
                 return Response({'sucess' : False, "keys_missing" :keys_missing }, status=status.HTTP_400_BAD_REQUEST)
             else:
-                editDocRes = editDocument(template, changeVariablesObject, False)  
+                editDocRes = editDocument(template, changeVariablesObject)  
                 document = editDocRes.get('doc')
                 doc = document
                 buffer = io.BytesIO()
@@ -171,7 +189,6 @@ def download(request, *args, **kwargs):
                 buffer.seek(0)
                 base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
                 doc_response['file'] = base64_data
-                #save to record_templates
                 try:
                     logger.info('saving to record_templates')
                 except Exception as e:

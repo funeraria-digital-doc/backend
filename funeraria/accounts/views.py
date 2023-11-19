@@ -35,7 +35,7 @@ def login(request):
     if username and password:
         user = authenticate(username=username, password=password)
         if not user:
-            return Response('Access denied: wrong email or password.',status=status.HTTP_401_UNAUTHORIZED)
+            return Response('Acesso negado. Nome ou palavra-passe erradas.',status=status.HTTP_401_UNAUTHORIZED)
         else:
             refresh = RefreshToken.for_user(user)
             refresh['name']= user.username
@@ -46,7 +46,7 @@ def login(request):
                 'access': str(refresh.access_token)
             },status=status.HTTP_200_OK)
     else:
-        return Response('Both "username" and "password" are required.',status=status.HTTP_200_OK)
+        return Response('Nome ou palavra-passe são obrigatórios.',status=status.HTTP_200_OK)
 
 @swagger_auto_schema(       
     method='post',
@@ -65,23 +65,23 @@ def change_password(request):
     password = request.data['password']
     confirm_password = request.data['confirm_password']
     if(not confirm_password or not password) :
-        return Response('Both "password" and "confirm_password" are required.',status=status.HTTP_400_BAD_REQUEST)
+        return Response('A palavra-passe e a sua confirmação são obrigatórios.',status=status.HTTP_400_BAD_REQUEST)
     
     if (confirm_password != password):
-        return Response('Both "password" and "confirm_password" must be equal.',status=status.HTTP_400_BAD_REQUEST)
+        return Response('A palavra-passe e a sua confirmação devem ser iguais.',status=status.HTTP_400_BAD_REQUEST)
     
     # Try to authenticate the user using Django auth framework.
     user = request.user
     if not user:
         # If we don't have a regular user, raise a ValidationError
-        return Response('There is no user',status=status.HTTP_401_UNAUTHORIZED)
+        return Response('Nenhum utilizador associado.',status=status.HTTP_401_UNAUTHORIZED)
     else:
         user.set_password(password)
         try:
             user.save()
             return Response({'success': True},status=status.HTTP_200_OK) 
         except Exception as e:
-            return Response('error changing password',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            return Response('Erro a alterar a palavra-passe',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
             
 
 @swagger_auto_schema(       
@@ -101,14 +101,14 @@ def file_upload(request):
     data['file'] = request.data['file']
     user = request.user
     if not user:
-        return Response('There is no user',status=status.HTTP_401_UNAUTHORIZED)
+        return Response('Nenhum utilizador associado.',status=status.HTTP_401_UNAUTHORIZED)
     serializer = ProfilePictureUploadSerializer(data = data,instance=user, partial=True)   
     if serializer.is_valid():
         try:
             serializer.update(instance = user, validated_data=serializer.validated_data)
             return Response({'success': True},status=status.HTTP_200_OK) 
         except Exception as e:
-            return Response('error uploading profile image',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            return Response('Erro ao carregar a imagem de perfil',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
     else:
         return Response({'error' : serializer.errors},status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
  
@@ -137,7 +137,7 @@ def profile(request):
     }
     if user: 
         return Response(user, status=status.HTTP_200_OK)
-    return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
+    return Response("Utilizador não existe", status=status.HTTP_406_NOT_ACCEPTABLE)
 
 @swagger_auto_schema(       
     method='get',
@@ -147,9 +147,10 @@ def profile(request):
 @permission_classes([IsAuthenticated])
 def profile_image(request): 
     if not request.user:
-        return Response("User does not exist", status=status.HTTP_406_NOT_ACCEPTABLE)
+        return Response("Utilizador não existe", status=status.HTTP_406_NOT_ACCEPTABLE)
+    
     user_data = {
-        'image' : request.user.file if request.user.file else None
+        'image' : User.objects.get(id=request.user.id).__getattribute__('file')
     }
     return Response(user_data, status=status.HTTP_200_OK)
     
@@ -170,14 +171,14 @@ def edit_profile(request, *args, **kwargs):
             except:
                 return Response(
                     {
-                        'error' : "something went wrong updating user",
+                        'error' : "Algo correu mal ao atualizar o utilizador.",
                         "data" : serializer.errors
                     }, 
                     status = status.HTTP_404_NOT_FOUND
                 )
         else:
             return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
-    return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
+    return Response({'error' : "Utilizador não encontrado"}, status = status.HTTP_404_NOT_FOUND) 
 
 @swagger_auto_schema(       
     method='get',
@@ -199,8 +200,8 @@ def list_all_users(request):
     else:
         users = User.objects.filter(group_user_id=request.user.group_user_id).values('id','username','email','is_staff','status')
     if users is None:
-        return Response({"error" : "No users found!"},status=status.HTTP_404_NOT_FOUND)
-    return Response({"users" : users, "message" : "Users found successfully!"}, status=status.HTTP_200_OK)  
+        return Response({"error" : "Nenhum utilizador encontrado!"},status=status.HTTP_404_NOT_FOUND)
+    return Response({"users" : users, "message" : "Utilizadores encontrados com sucesso!"}, status=status.HTTP_200_OK)  
 
 
 
@@ -251,7 +252,7 @@ def remove(request, *args, **kwargs):
         user.delete()
     except Exception as e:
         return Response({"error" : e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return Response({"success" : "User deleted successfully!"}, status=status.HTTP_200_OK)
+    return Response({"success" : "Utilizador eliminado comm sucesso!"}, status=status.HTTP_200_OK)
     
 @swagger_auto_schema(
     method='post',
@@ -281,10 +282,10 @@ def edit_user(request, *args, **kwargs):
                     response['group'] = user.group_user.id if user.group_user is not None else None
                 return Response(response, status = status.HTTP_200_OK)
             except:
-                return Response({'error' : "something went wrong updating user","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+                return Response({'error' : "Algo correu mal ao atualizar o utilizador","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
         else:
             return Response({'error' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST) 
-    return Response({'error' : "User not found"}, status = status.HTTP_404_NOT_FOUND) 
+    return Response({'error' : "Utilizador não encontrado"}, status = status.HTTP_404_NOT_FOUND) 
 
 def getRole(user):
     role = 'user'

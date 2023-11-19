@@ -1,5 +1,7 @@
-from docxtpl import DocxTemplate
+from docxtpl import DocxTemplate, InlineImage
+from docx.shared import Mm
 import base64
+from io import BytesIO
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime
@@ -88,8 +90,9 @@ def convert_to_babel_format(python_format):
 
     return babel_format
 
-def editDocument(template, data, saveDocument):
+def editDocument(template, data):
     from django.shortcuts import render
+    from PIL import Image
     doc_variables = get_doc_variables(template, True, True)
     if len(doc_variables['vars']) ==  0:
         return Response({"error" : "No variables found"}, status = status.HTTP_404_NOT_FOUND)
@@ -108,6 +111,14 @@ def editDocument(template, data, saveDocument):
                     edited_str += ", " + edited
 
             context[var] = edited_str
+        elif type(edited_value) is dict and 'file' in edited_value:
+            img_data = base64.b64decode(edited_value['file'])
+            img_io = BytesIO(img_data) 
+            img = Image.open(img_io)
+            img_io = BytesIO()
+            img.save(img_io, format='PNG')  # or another format ('JPEG', etc.)
+            img_io.seek(0)
+            context[var] = InlineImage(doc_variables['doc'], img_io, width=Mm(edited_value['width']) if edited_value['width'] else None,  heigth=Mm(edited_value['heigth']) if edited_value['heigth'] else None)
         else:
             context[var] = edited_value
         edited_keys_array.append(context[var])
@@ -118,9 +129,9 @@ def editDocument(template, data, saveDocument):
             not_used_vars.append(doc_var)
             edited_keys[doc_var] = '{{ ' + doc_var + ' }}'
     if len(context) > 0 :
-        doc_variables['doc'].render(context=context)
-        if saveDocument:
-            doc_variables['doc'].save('media/' + template.get('file'))
+        doc_variables['doc'].render(context)
+        # if saveDocument:
+        #     doc_variables['doc'].save('media/' + template.get('file'))
     return {'not_found_keys' : not_found_keys, 'edited_keys' : edited_keys_array, "doc" : doc_variables['doc']}
 
 def getDbKeysToDoc(request, template, template_validations, changeVariablesObject, doc_variables, keys_missing, record):
@@ -143,32 +154,49 @@ def getDbKeysToDoc(request, template, template_validations, changeVariablesObjec
                 if validation.get("db_collection") == "RECORDS" and validation.get("db_field_reference") in record:
                     if 'field_type' in validation and validation.get("field_type") in ["SELECT"]:
                         changeVariablesObject[key] = getLabel(record.get(validation.get("db_field_reference")),recordLabels)
+                    elif 'field_type' in validation and validation.get("field_type") in ["FILE"]:
+                        changeVariablesObject[key] = { 
+                            'file' : record.get(validation.get("db_field_reference")).split(',')[1],
+                            'width' : 50,
+                            'heigth' : 50,
+                        }
                     else:
                         changeVariablesObject[key] = record.get(validation.get("db_field_reference"))
-
-              
-        if 'field_type' in validation and validation.get("field_type") in ["DATE", "TIME", 'DATETIME'] and 'format' in validation:
-            if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
-                logger.info("cenas - " + key)
-                getFormat =  getFullDate(validation.get('format'), False)
-                dateValue = request.data.get('validations')[key] if validation.get("is_field_custom") else str(changeVariablesObject[key].strftime(getFormat))
-                newdate = datetime.strptime(dateValue, getFormat)
-                dateFormat = convert_to_babel_format(getFullDate(validation.get('format'), True)).replace("''", "")
-                logger.info(dateFormat)
-                date = format_datetime(newdate,dateFormat, locale='pt_PT')
-                logger.info(date)
-            else: 
-                if isinstance(changeVariablesObject[key], str):
-                    date = parse(str(changeVariablesObject[key])).strftime(getFullDate(validation.get('format'), False))
+                if validation.get("db_collection") == "SYSTEM":
+                    if validation.get("db_field_reference") == 'CURRENT_DATE':
+                        getFormat =  getFullDate(validation.get('format'), not validation.get('is_date_numeric'))
+                        nowDate = datetime.now()
+                        dateFormat = convert_to_babel_format(getFormat).replace("''", "")
+                        date = format_datetime(nowDate,dateFormat, locale='pt_PT')
+                        changeVariablesObject[key] = date
+                if 'field_type' in validation and validation.get("field_type") in ["DATE", "TIME", 'DATETIME'] and 'format' in validation:
+                    if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
+                        date = getNumericDate(validation, request, key, changeVariablesObject)
+                    else: 
+                        date = parse(str(changeVariablesObject[key])).strftime(getFullDate(validation.get('format'), False)) if isinstance(changeVariablesObject[key], str) else changeVariablesObject[key].strftime(getFullDate(validation.get('format'), False))
+                    changeVariablesObject[key] = date
+                            
+            else:
+                keys_missing.append(key)
+                continue
+        else: 
+            if not key in changeVariablesObject or changeVariablesObject == "" or changeVariablesObject == None:
+                keys_missing.append(key)
+                continue
+            if 'field_type' in validation and validation.get("field_type") in ["DATE", "TIME", 'DATETIME'] and 'format' in validation:
+                if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
+                    date = getNumericDate(validation, request, key, changeVariablesObject)
                 else: 
-                    date = changeVariablesObject[key].strftime(getFullDate(validation.get('format'), False))
-            changeVariablesObject[key] = date
-        # if not validation.get("is_field_custom") and 'field_type' in validation and validation.get("field_type") in ["SELECT"]:
-        #     logger.info('get labels ')
-        if not key in changeVariablesObject or changeVariablesObject == "" or changeVariablesObject == None:
-            keys_missing.append(key)
+                    date = parse(str(changeVariablesObject[key])).strftime(getFullDate(validation.get('format'), False)) if isinstance(changeVariablesObject[key], str) else changeVariablesObject[key].strftime(getFullDate(validation.get('format'), False))
+                changeVariablesObject[key] = date
 
-
+def getNumericDate(validation, request, key, changeVariablesObject):
+    getFormat =  getFullDate(validation.get('format'), False)
+    dateValue = request.data.get('validations')[key] if validation.get("is_field_custom") else str(changeVariablesObject[key].strftime(getFormat))
+    newdate = datetime.strptime(dateValue, getFormat)
+    dateFormat = convert_to_babel_format(getFullDate(validation.get('format'), True)).replace("''", "")
+    date = format_datetime(newdate,dateFormat, locale='pt_PT')
+    return date
 def get_doc_variables(template, getDoc, getVars):
     base64_string = template.get('file').split(',')[1]
     docx_bytes = base64.b64decode(base64_string)
