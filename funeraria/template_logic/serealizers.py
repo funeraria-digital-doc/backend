@@ -92,8 +92,12 @@ class UploadSerializer(serializers.ModelSerializer):
         name = serializers.CharField(error_messages = {
             "required": "Este campo é obrigatório",
         })
+        name_with_extension = serializers.CharField(error_messages = {
+            "required": "Este campo é obrigatório",
+        })
+        image_data_base64 = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
         is_field_custom = serializers.BooleanField()
-        db_collection = serializers.ChoiceField(choices = DB_COLLECTION_CHOICES, allow_null=True, required = False)
+        db_collection = serializers.ChoiceField(choices = DB_COLLECTION_CHOICES, allow_null=True, allow_blank = True, required = False)
         db_field_reference = serializers.CharField(required = False,allow_blank=True)
     class ValidationsSerializer(serializers.Serializer):
         class StringListField(serializers.ListField):
@@ -226,6 +230,17 @@ class UploadSerializer(serializers.ModelSerializer):
 
 
 class EditUploadSerializer(serializers.ModelSerializer):    
+    class FileValidationsSerializer(serializers.Serializer):
+        name = serializers.CharField(error_messages = {
+            "required": "Este campo é obrigatório",
+        })
+        name_with_extension = serializers.CharField(error_messages = {
+            "required": "Este campo é obrigatório",
+        })
+        image_data_base64 = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
+        is_field_custom = serializers.BooleanField()
+        db_collection = serializers.ChoiceField(choices = DB_COLLECTION_CHOICES, allow_null=True, allow_blank = True, required = False)
+        db_field_reference = serializers.CharField(required = False,allow_blank=True)
     class ValidationsSerializer(serializers.Serializer):
         class StringListField(serializers.ListField):
             child = serializers.CharField()
@@ -279,7 +294,6 @@ class EditUploadSerializer(serializers.ModelSerializer):
                 validation_errors['name'] = ['Field is required.']
             field_type= data_dict.get('field_type')
             is_field_custom= data_dict.get('is_field_custom')
-            
             if field_type in ["DATE","DATETIME","TIME"] and ('format' not in data_keys or data_dict.get('format') == ""):
                 validation_errors['format'] = ['When field_type is DATE, DATETIME or TIME, the field format is required.']
             if field_type in ["DATE","DATETIME","TIME"] and ('is_date_numeric' not in data_keys or data_dict.get('is_date_numeric') == ""):
@@ -318,6 +332,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
                         else:
                             validation_errors['default_value'] = errors.get('default_value')   
             if validation_errors:
+                
                 raise ValidationError(validation_errors)
             return data
         class Meta:
@@ -328,7 +343,8 @@ class EditUploadSerializer(serializers.ModelSerializer):
     group = serializers.PrimaryKeyRelatedField(required = False, allow_null = True, queryset = Group.objects.all(), error_messages = {
         "required": "Este campo é obrigatório"
     })
-    validations = serializers.ListField(allow_empty=True, child = ValidationsSerializer())
+    validations = serializers.ListField(allow_empty=True, allow_null = True, required= False, child = ValidationsSerializer())
+    file_validations = serializers.ListField(allow_empty=True, allow_null = True, required= False, child = FileValidationsSerializer())
     send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, allow_null = True, error_messages = {
         "required": "Este campo é obrigatório",
         "invalid_choice": "Opção inválida"
@@ -360,7 +376,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
         
     class Meta:
         model = TemplateLogic
-        fields = ['title','file','group','validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
+        fields = ['title','file','group','validations', 'file_validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
 
 
 

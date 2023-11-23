@@ -70,6 +70,7 @@ class Record(models.Model):
     leaving_mortuary_datetime = models.DateTimeField(db_column='leaving_mortuary_time', null=True, blank=True)
     funeral_datetime = models.DateTimeField(db_column='funeral_datetime', null=True, blank=True)
     funeral_local = models.CharField(max_length=255, db_column='funeral_local', null=True, blank=True)
+    mortuary = models.CharField(max_length=255, db_column='mortuary', null=True, blank=True)
 
     family_member_name = models.CharField(max_length=255, db_column='family_member_name', null=True, blank=True) 
     family_member_cc = models.CharField(max_length=16, db_column='family_member_cc', null=True, blank=True)

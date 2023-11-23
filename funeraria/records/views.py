@@ -24,7 +24,6 @@ def create(request, *args, **kwargs):
     record = {}
     for requestPart in request.data:
         record[requestPart] = request.data.get(requestPart)
-    logger.info(request.user.__dict__)
     record['group'] = request.user.group_user_id if request.user.group_user_id else None
     serializer = RecordCreateSerializer(data=record)
     finalRecord = {}

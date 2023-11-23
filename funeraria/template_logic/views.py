@@ -1,6 +1,6 @@
 import io
-import json
-import os
+from record_templates.serializers import RecordTemplateSerializer
+
 from template_logic.helpers.helper import  editDocument, get_doc_variables, getDbKeysToDoc, hasDuplicates
 from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
@@ -104,9 +104,10 @@ def get_variables_from_file(request, *args, **kwargs):
                 image_name = image_name_with_extension.split('.')[0]
                 img_data = archive.read(file)
                 file_variables.append({
-                    'name': image_name,
-                    'name_with_extension': image_name_with_extension,
-                    'image_data': base64.b64encode(img_data).decode('utf-8')
+                    'name': image_name.replace('image', 'Imagem '),
+                    'name_with_extension': image_name_with_extension.replace('image', 'Imagem '),
+                    'image_data': base64.b64encode(img_data).decode('utf-8'),
+                    'image_data_base64' : "data:image/jpg;base64," + base64.b64encode(img_data).decode('utf-8')
                 })
                 
         variables = doc.get_undeclared_template_variables() if doc.get_undeclared_template_variables() else []
@@ -167,71 +168,88 @@ def download(request, *args, **kwargs):
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
     if request.data.get('to_send_option') not in dict(SEND_TYPE_CHOICES):
         return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)   
-    doc = {}
+    #doc = {}
     doc_response = {}
     if request.data.get('to_send_option') == "DOCUMENT" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
         validate_data = run_template_validations(template.get('validations'), request.data.get('validations'), "DOWNLOAD")
         if not validate_data.get('success') :
             return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
         if validate_data.get('success'):
-            changeVariablesObject = {}
+            changeVariablesObject = {
+                'variables' : {},
+                'files': {}
+            }
             keys_missing = []
             doc_variables = get_doc_variables(template, True, True)
-            getDbKeysToDoc(request, template, template.get('validations'), changeVariablesObject, doc_variables, keys_missing, record)
+            getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys_missing, record)
             if len(keys_missing) > 0:
                 return Response({'sucess' : False, "keys_missing" :keys_missing }, status=status.HTTP_400_BAD_REQUEST)
             else:
                 editDocRes = editDocument(template, changeVariablesObject)  
                 document = editDocRes.get('doc')
-                doc = document
+                #doc = document
                 buffer = io.BytesIO()
                 document.save(buffer)
                 buffer.seek(0)
                 base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
                 doc_response['file'] = base64_data
-                try:
-                    logger.info('saving to record_templates')
-                except Exception as e:
+                data = {
+                    'template' : template.get('id'),
+                    'record' : record.get('id'),
+                    'answers' : changeVariablesObject.items()
+                }
+                recordTemplateSerializer = RecordTemplateSerializer(data = data)
+                
+                logger.info('saving to record_templates')
+                if recordTemplateSerializer.is_valid():
+                    try:            
+                        recordTemplateSerializer.save()
+                        logger.info('saved to record_templates')
+                    except:
+                        logger.info('error saving to record_templates')
+                else:
+                    logger.info(recordTemplateSerializer.errors)
                     logger.info('error saving to record_templates')
+            
                 #return response
 
-    if request.data.get('to_send_option') == "EMAIL" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
-        from django.core.mail import EmailMultiAlternatives
-        from django.template.loader import render_to_string
-        from django.utils.html import strip_tags
-        context = {'variable1': 'Value 1', 'variable2': 'Value 2'}
-        # Get the rendered HTML of the email template
-        html_message = render_to_string('email_template.html', context)
-        # Convert the HTML to plain text for the email body
-        plain_message = strip_tags(html_message)
-        # Set up the email parameters
-        from_email = 'from@example.com'
-        html_message = html_message
-        group = Group.objects.filter(id= template.get('group_id')).values().first()
-        subject = group.get('name') + " - " + template.get('title')
-        attachments = []
-        if template.get('file'):
-            attachments.append("media/" + template.get('file'))
-        # Send the email
-        try:
-            email = EmailMultiAlternatives(subject, plain_message, from_email, template.get('send_email_to'))
-            email.attach_alternative(html_message, 'text/html')
-            for attachment in attachments:
-                with open(attachment, 'rb') as file:
-                    filename = os.path.basename(attachment)
-                    email.attach(filename, file.read())
-            if doc:
-                buffer = io.BytesIO()
-                doc.save(buffer)
-                buffer.seek(0)
-                import random
-                random_number = random.randint(1, 100000000)
-                email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-                #email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', doc)
-            email.send()
-            print('mandou email')
-        except Exception as e:
-            print(e)
+    # if request.data.get('to_send_option') == "EMAIL" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
+    #     from django.core.mail import EmailMultiAlternatives
+    #     from django.template.loader import render_to_string
+    #     from django.utils.html import strip_tags
+    #     context = {'variable1': 'Value 1', 'variable2': 'Value 2'}
+    #     # Get the rendered HTML of the email template
+    #     html_message = render_to_string('email_template.html', context)
+    #     # Convert the HTML to plain text for the email body
+    #     plain_message = strip_tags(html_message)
+    #     # Set up the email parameters
+    #     from_email = 'from@example.com'
+    #     html_message = html_message
+    #     group = Group.objects.filter(id= template.get('group_id')).values().first()
+    #     subject = group.get('name') + " - " + template.get('title')
+    #     attachments = []
+    #     if template.get('file'):
+    #         attachments.append("media/" + template.get('file'))
+    #     # Send the email
+    #     try:
+    #         email = EmailMultiAlternatives(subject, plain_message, from_email, template.get('send_email_to'))
+    #         email.attach_alternative(html_message, 'text/html')
+    #         for attachment in attachments:
+    #             with open(attachment, 'rb') as file:
+    #                 filename = os.path.basename(attachment)
+    #                 email.attach(filename, file.read())
+    #         if doc:
+    #             buffer = io.BytesIO()
+    #             doc.save(buffer)
+    #             buffer.seek(0)
+    #             import random
+    #             random_number = random.randint(1, 100000000)
+    #             email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    #             #email.attach(template.get('title') + '_' + request.user.username + '_' + str(random_number) + '.docx', doc)
+    #         email.send()
+    #         print('mandou email')
+    #     except Exception as e:
+    #         print(e)
 
     if doc_response:
         return Response(doc_response, status=status.HTTP_200_OK)
@@ -278,6 +296,8 @@ def edit(request, *args, **kwargs):
         data['file'] = request.data.get('file')
     if request.data.get('validations'):
         data['validations'] = request.data.get('validations') if request.data.get('validations') is not None else []
+    if request.data.get('file_validations'):
+        data['file_validations'] = request.data.get('file_validations') if request.data.get('file_validations') is not None else []
     if request.data.get('send_type'):
         data['send_type'] = request.data.get('send_type') if request.data.get('send_type') is not None else []
     if request.data.get('send_email_to'):
@@ -295,6 +315,7 @@ def edit(request, *args, **kwargs):
         except:
             return Response({'success' : False,"errors" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
     else:
+        logger.info(serializer.errors)
         return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
     
 @swagger_auto_schema(
@@ -347,7 +368,7 @@ def check_validations(request, *args, **kwargs):
 @api_view(['GET'])
 @permission_classes([IsSuperUser])
 def get_template(request, *args, **kwargs):
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('id', 'title', 'group_id', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc', 'file', 'validations').first()
+    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('id', 'title', 'group_id', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc', 'file', 'validations', 'file_validations').first()
     if template is None:
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     try:
