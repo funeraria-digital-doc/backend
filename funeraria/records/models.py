@@ -76,6 +76,7 @@ class Record(models.Model):
     family_member_cc = models.CharField(max_length=16, db_column='family_member_cc', null=True, blank=True)
     family_member_cc_valid_until = models.DateField(db_column='family_member_cc_valid_until', null=True, blank=True)
     family_member_kinship = models.CharField(max_length=64, db_column='family_member_kinship', null=True, blank=True) 
+    family_member_email = models.CharField(max_length=64, db_column='family_member_email', null=True, blank=True) 
     family_member_phone = models.CharField(max_length=32, db_column='family_member_phone') 
     death_declaration_number = models.CharField(max_length=32, db_column='death_declaration_number', null=True, blank=True) 
     objects = models.DjongoManager()
