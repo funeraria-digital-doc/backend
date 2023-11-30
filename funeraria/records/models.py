@@ -1,11 +1,8 @@
-#from django.db import models
 from djongo import models
 from groups.models import Group
 from django_currentuser.db.models import CurrentUserField
 import logging
-from django.core.cache import cache
 logger = logging.getLogger(__name__)
-cache_keys = ['records_per_month_1', 'records_per_month_3', 'records_per_month_6', 'deaths_in_last_30', 'deaths_in_last_60', 'deaths_in_last_90', 'current_month_services', 'best_month', 'current_year_services']
 class Record(models.Model):
 
     group = models.ForeignKey(Group, on_delete=models.SET_NULL, null=True, blank=True, related_name = "record_group")
@@ -83,14 +80,6 @@ class Record(models.Model):
 
     def __str__(self):
         return self.name
-
-    def delete(self, *args, **kwargs):
-        cache.delete_many(cache_keys)
-        super().delete(*args, **kwargs)
-
-    def save(self, *args, **kwargs):
-        cache.delete_many(cache_keys)
-        super().save(*args, **kwargs)
     
     
 

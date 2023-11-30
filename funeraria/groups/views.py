@@ -7,7 +7,6 @@ from groups.serealizers import GroupCreateSerializer, GroupUpdateSerializer
 from groups.models import Group
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.parsers import JSONParser
-from django.core.cache import cache
 from rest_framework.permissions import IsAuthenticated
 logger = logging.getLogger(__name__)
 
@@ -99,13 +98,7 @@ def remove(request, *args, **kwargs):
 @permission_classes([IsAuthenticated])
 def list(request, *args, **kwargs):
     if request.user.is_superuser:
-        cache_key = 'all_groups'
-        groups = cache.get(cache_key)
-        if not groups:
-            groups = Group.objects.all().values('id','name')
-            cache.set(cache_key, groups)
-        else:
-            cache.touch(cache_key)
+        groups = Group.objects.all().values('id','name')
         return Response(groups, status = status.HTTP_200_OK)
     elif request.user.group_user_id:
         groups = Group.objects.filter(id=request.user.group_user_id).values('id','name')

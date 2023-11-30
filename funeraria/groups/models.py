@@ -1,6 +1,5 @@
 from django.db import models
 from django_currentuser.db.models import CurrentUserField
-from django.core.cache import cache
 class Group(models.Model):
     name = models.CharField(max_length=255,unique=True, db_column='name') 
     created_by = CurrentUserField(related_name='group_created_by')
@@ -8,14 +7,6 @@ class Group(models.Model):
     
     def __str__(self):
         return self.name
-    
-    def delete(self, *args, **kwargs):
-        cache.delete('all_groups')
-        super().delete(*args, **kwargs)
-
-    def save(self, *args, **kwargs):
-        cache.delete('all_groups')
-        super().save(*args, **kwargs)
 
 
     

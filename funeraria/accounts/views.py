@@ -13,7 +13,6 @@ from rest_framework.decorators import parser_classes
 from funeraria.permissions import IsAdmin, IsAdminOrUpper, IsSuperUser, isEqualOrUpperPermission
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import F
-from django.core.cache import cache
 import logging
 logger = logging.getLogger(__name__)
 
@@ -190,15 +189,9 @@ def edit_profile(request, *args, **kwargs):
 @permission_classes([IsAdminOrUpper])
 def list_all_users(request):
     if(request.user.is_superuser):
-        cache_key = 'all_users'
-        users = cache.get(cache_key)
-        if not users:
-            users = User.objects.all().annotate(
-                group=F('group_user_id')
-            ).values('id','is_superuser','username','email','is_staff','status','group')
-            cache.set(cache_key, users)
-        else:
-            cache.touch(cache_key)
+        users = User.objects.all().annotate(
+            group=F('group_user_id')
+        ).values('id','is_superuser','username','email','is_staff','status','group')
     else:
         users = User.objects.filter(group_user_id=request.user.group_user_id).values('id','username','email','is_staff','status')
     if users is None:

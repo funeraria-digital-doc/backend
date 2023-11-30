@@ -202,6 +202,7 @@ class UploadSerializer(serializers.ModelSerializer):
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     file = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
+    file_name = serializers.CharField(required = False,allow_null = True)
 
     def validate(self,data):
         data_dict = dict(data)
@@ -225,7 +226,7 @@ class UploadSerializer(serializers.ModelSerializer):
   
     class Meta:
         model = TemplateLogic
-        fields = ['title','file','group','validations','file_validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
+        fields = ['title','file','file_name','group','validations','file_validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
         
 
 
@@ -353,6 +354,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     file = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
+    file_name = serializers.CharField(required = False,allow_null = True)
 
     def validate(self,data):
         data_dict = dict(data)
@@ -376,7 +378,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
         
     class Meta:
         model = TemplateLogic
-        fields = ['title','file','group','validations', 'file_validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
+        fields = ['title','file','file_name','group','validations', 'file_validations','send_type','send_email_to','send_email_to_cc','send_email_to_bcc']
 
 
 

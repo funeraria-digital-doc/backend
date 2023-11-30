@@ -27,14 +27,5 @@ class User(AbstractUser):
     updated_by = CurrentUserField(related_name='account_updated_by',on_update=True)
     def __str__(self):
         return self.username
-    
-    def delete(self, *args, **kwargs):
-        from django.core.cache import cache
-        cache.delete('all_users')
-        super().delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        from django.core.cache import cache
-        cache.delete('all_users')
-        super().save(*args, **kwargs)
     

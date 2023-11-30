@@ -19,7 +19,6 @@ from drf_yasg.utils import swagger_auto_schema
 from docxtpl import DocxTemplate
 import base64
 import logging
-from django.core.cache import cache
 import zipfile
 logger = logging.getLogger(__name__)
 
@@ -31,40 +30,36 @@ logger = logging.getLogger(__name__)
 @permission_classes([IsSuperUser])
 def list_templates(request):    
     try:
-        cache_key = 'all_templates'
-        templates = cache.get(cache_key)
-        if not templates:
-            pipeline = [
-                {
-                    '$addFields': {
-                        'new_file': {
-                            '$cond': [{'$eq': ['$file', '']}, False, True]
-                        }
-                    }
-                },
-                {
-                    '$project': {
-                        'id': '$id',
-                        'title': '$title',
-                        'group_id': '$group_id', 
-                        'send_type': '$send_type',
-                        'file': '$new_file'
+        pipeline = [
+            {
+                '$addFields': {
+                    'new_file': {
+                        '$cond': [{'$eq': ['$file', '']}, False, True]
                     }
                 }
-            ]
-            result = TemplateLogic.objects.mongo_aggregate(pipeline)
-            templates = []
-            for item in result:
-                newItem = {}
-                newItem['id'] = item['id']
-                newItem['title'] = item['title']
-                newItem['group_id'] = item['group_id']
-                newItem['send_type'] = item['send_type']
-                newItem['file'] = item['file']
-                templates.append(newItem)
-            cache.set(cache_key, templates)
-        else:
-            cache.touch(cache_key)
+            },
+            {
+                '$project': {
+                    'id': '$id',
+                    'title': '$title',
+                    'group_id': '$group_id', 
+                    'send_type': '$send_type',
+                    'file': '$new_file',
+                    'file_name': '$file_name'
+                }
+            }
+        ]
+        result = TemplateLogic.objects.mongo_aggregate(pipeline)
+        templates = []
+        for item in result:
+            newItem = {}
+            newItem['id'] = item['id']
+            newItem['title'] = item['title']
+            newItem['group_id'] = item['group_id']
+            newItem['send_type'] = item['send_type']
+            newItem['file'] = item['file']
+            newItem['file_name'] = item['file_name']
+            templates.append(newItem)
         if templates:
             return Response({'success' : True, 'data' : templates}, status=status.HTTP_200_OK)
         else: 
@@ -130,6 +125,7 @@ def upload(request):
         'title' : request.data.get('title'),
         'group' : request.data.get('group_id'),
         'file' : request.data.get('file'),
+        'file_name' : request.data.get('file_name') if request.data.get('file_name') else 'file',
         'validations' : request.data.get('validations') if request.data.get('validations') is not None else [],
         'file_validations' : request.data.get('file_validations') if request.data.get('file_validations') is not None else [],
         'send_type' : request.data.get('send_type') if request.data.get('send_type') is not None else 'NONE',
@@ -144,11 +140,13 @@ def upload(request):
                 form.save()
                 return Response({'data' : form.data}, status=status.HTTP_200_OK)
             except Exception as e:
+                logger.info(e)
                 return Response({'errors' : "erro"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.info(form.errors)
             return Response({'errors' : form.errors}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
+        
         return Response({'errors' : 'error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
@@ -278,6 +276,7 @@ def template_download(request, *args, **kwargs):
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def edit(request, *args, **kwargs):
+    logger.info(request.data.get('file_name'))
     template = TemplateLogic.objects.filter(pk=kwargs.get('pk')).first()  
     if template is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
@@ -294,6 +293,7 @@ def edit(request, *args, **kwargs):
         data['group'] = request.data.get('group_id')
     if request.data.get('file'):
         data['file'] = request.data.get('file')
+    data['file_name'] = request.data.get('file') if request.data.get('file') else 'file'
     if request.data.get('validations'):
         data['validations'] = request.data.get('validations') if request.data.get('validations') is not None else []
     if request.data.get('file_validations'):
@@ -368,7 +368,7 @@ def check_validations(request, *args, **kwargs):
 @api_view(['GET'])
 @permission_classes([IsSuperUser])
 def get_template(request, *args, **kwargs):
-    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('id', 'title', 'group_id', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc', 'file', 'validations', 'file_validations').first()
+    template = TemplateLogic.objects.filter(id=kwargs.get('pk')).values('id', 'title', 'group_id', 'send_type', 'send_email_to', 'send_email_to_cc', 'send_email_to_bcc', 'file', 'file_name', 'validations', 'file_validations').first()
     if template is None:
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     try:
