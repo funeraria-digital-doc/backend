@@ -327,7 +327,7 @@ def edit(request, *args, **kwargs):
 def remove(request, *args, **kwargs):   
     try:
         TemplateLogic.objects.filter(id=kwargs.get('pk')).delete()
-        return Response({"success" : True}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"success" : True}, status=status.HTTP_200_OK)
     except Exception as error:
         return Response({"success" : False, 'error' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

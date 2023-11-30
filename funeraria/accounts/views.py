@@ -71,7 +71,8 @@ def change_password(request):
         return Response('A palavra-passe e a sua confirmação devem ser iguais.',status=status.HTTP_400_BAD_REQUEST)
     
     # Try to authenticate the user using Django auth framework.
-    user = request.user
+    user = User.objects.get(id=request.user.id)
+    logger.info(user)
     if not user:
         # If we don't have a regular user, raise a ValidationError
         return Response('Nenhum utilizador associado.',status=status.HTTP_401_UNAUTHORIZED)
@@ -81,6 +82,7 @@ def change_password(request):
             user.save()
             return Response({'success': True},status=status.HTTP_200_OK) 
         except Exception as e:
+            logger.info(e)
             return Response('Erro a alterar a palavra-passe',status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
             
 

@@ -71,7 +71,7 @@ def update(request, *args, **kwargs):
     if serializer.is_valid():
         if record is None:
                 return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
-        try:            
+        try:          
             serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
@@ -90,7 +90,7 @@ def remove(request, *args, **kwargs):
     if record is None:
         return Response({"errors" : "Declaração não existe!"},status=status.HTTP_404_NOT_FOUND)
     record.delete()
-    return Response({"success" : "Declaração eliminada com sucesso!"}, status=status.HTTP_204_NO_CONTENT)
+    return Response({"success" : "Declaração eliminada com sucesso!"}, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='get',
