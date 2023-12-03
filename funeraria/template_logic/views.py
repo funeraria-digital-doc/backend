@@ -293,7 +293,7 @@ def edit(request, *args, **kwargs):
         data['group'] = request.data.get('group_id')
     if request.data.get('file'):
         data['file'] = request.data.get('file')
-    data['file_name'] = request.data.get('file') if request.data.get('file') else 'file'
+    data['file_name'] = request.data.get('file_name') if request.data.get('file_name') else 'file'
     if request.data.get('validations'):
         data['validations'] = request.data.get('validations') if request.data.get('validations') is not None else []
     if request.data.get('file_validations'):

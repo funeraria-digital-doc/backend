@@ -152,6 +152,8 @@ def getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys
             changeVariablesObject['variables'][variable] = request.data.get('validations')[variable]
     for fileKey,fileValidation in file_validations.items():
         if not fileKey in changeVariablesObject['files']:
+            if "is_blocked" in fileValidation and fileValidation.get("is_blocked"):
+                continue 
             if "is_field_custom" in fileValidation and not fileValidation.get("is_field_custom") and "db_collection" in fileValidation:
                 if fileValidation.get("db_collection") == "USERS":
                     userField = getattr(request.user, fileValidation.get("db_field_reference"), "")
@@ -193,25 +195,29 @@ def getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys
                         date = format_datetime(nowDate,dateFormat, locale='pt_PT')
                         changeVariablesObject['variables'][key] = date
                 if 'field_type' in validation and validation.get("field_type") in ["DATE", "TIME", 'DATETIME'] and 'format' in validation and key in changeVariablesObject['variables']:
-                    if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
-                        date = getNumericDate(validation, request, key, changeVariablesObject['variables'])
-                    else: 
-                        date = parse(str(changeVariablesObject['variables'][key])).strftime(getFullDate(validation.get('format'), False)) if isinstance(changeVariablesObject['variables'][key], str) else changeVariablesObject['variables'][key].strftime(getFullDate(validation.get('format'), False))
-                    changeVariablesObject['variables'][key] = date
+                    date = ''
+                    if changeVariablesObject['variables'][key]:
+                        if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
+                            date = getNumericDate(validation, request, key, changeVariablesObject['variables'])
+                        else: 
+                            date = parse(str(changeVariablesObject['variables'][key])).strftime(getFullDate(validation.get('format'), False)) if isinstance(changeVariablesObject['variables'][key], str) else changeVariablesObject['variables'][key].strftime(getFullDate(validation.get('format'), False))
+                    changeVariablesObject['variables'][key] = date 
                             
             else:
-                keys_missing.append(key)
+                keys_missing.append(key) 
                 continue
         else: 
             if not key in changeVariablesObject['variables'] or changeVariablesObject['variables'] == "" or changeVariablesObject['variables'] == None:
                 keys_missing.append(key)
                 continue
             if 'field_type' in validation and validation.get("field_type") in ["DATE", "TIME", 'DATETIME'] and 'format' in validation:
-                if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
-                    date = getNumericDate(validation, request, key, changeVariablesObject['variables'])
-                else: 
-                    date = parse(str(changeVariablesObject['variables'][key])).strftime(getFullDate(validation.get('format'), False)) if isinstance(changeVariablesObject['variables'][key], str) else changeVariablesObject['variables'][key].strftime(getFullDate(validation.get('format'), False))
-                changeVariablesObject['variables'][key] = date
+                date = ''
+                if changeVariablesObject['variables'][key] is not None:
+                    if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
+                        date = getNumericDate(validation, request, key, changeVariablesObject['variables'])
+                    else: 
+                        date = parse(str(changeVariablesObject['variables'][key])).strftime(getFullDate(validation.get('format'), False)) if isinstance(changeVariablesObject['variables'][key], str) else changeVariablesObject['variables'][key].strftime(getFullDate(validation.get('format'), False))
+                changeVariablesObject['variables'][key] = date 
 
 def getNumericDate(validation, request, key, changeVariablesObject):
     getFormat =  getFullDate(validation.get('format'), False)

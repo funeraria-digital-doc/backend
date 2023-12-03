@@ -97,6 +97,7 @@ class UploadSerializer(serializers.ModelSerializer):
         })
         image_data_base64 = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
         is_field_custom = serializers.BooleanField()
+        is_blocked = serializers.BooleanField(default=False)
         db_collection = serializers.ChoiceField(choices = DB_COLLECTION_CHOICES, allow_null=True, allow_blank = True, required = False)
         db_field_reference = serializers.CharField(required = False,allow_blank=True)
     class ValidationsSerializer(serializers.Serializer):
@@ -240,6 +241,7 @@ class EditUploadSerializer(serializers.ModelSerializer):
         })
         image_data_base64 = serializers.CharField(required = False,allow_null = True, max_length = 100000000)
         is_field_custom = serializers.BooleanField()
+        is_blocked = serializers.BooleanField(default=False)
         db_collection = serializers.ChoiceField(choices = DB_COLLECTION_CHOICES, allow_null=True, allow_blank = True, required = False)
         db_field_reference = serializers.CharField(required = False,allow_blank=True)
     class ValidationsSerializer(serializers.Serializer):
