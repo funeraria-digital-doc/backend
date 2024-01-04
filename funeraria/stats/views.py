@@ -246,7 +246,10 @@ def deaths_by_user(request, *args, **kwargs):
 def current_month_services(request, *args, **kwargs):
     now = datetime.now()
     days_ago = now.replace(day=1)  
-    result = Record.objects.filter(death_date__gte=days_ago).count()
+    if request.user.group_user_id is not None:
+        result = Record.objects.filter(death_date__gte=days_ago,group_id=request.user.group_user_id).count()
+    else:
+        result = Record.objects.filter(death_date__gte=days_ago).count()
     return Response({'result': result}, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
@@ -257,8 +260,11 @@ def current_month_services(request, *args, **kwargs):
 @permission_classes([IsAdminOrUpper])
 def current_year_services(request, *args, **kwargs):
     now = datetime.now()
-    days_ago = now.replace(day=1, month=1)  
-    result = Record.objects.filter(death_date__gte=days_ago).count()
+    days_ago = now.replace(day=1, month=1) 
+    if request.user.group_user_id is not None:
+        result = Record.objects.filter(death_date__gte=days_ago,group_id=request.user.group_user_id).count()
+    else:
+        result = Record.objects.filter(death_date__gte=days_ago).count()
     return Response({'result': result}, status = status.HTTP_200_OK)
 
 @swagger_auto_schema(
@@ -268,12 +274,13 @@ def current_year_services(request, *args, **kwargs):
 @api_view(['GET'])
 @permission_classes([IsAdminOrUpper])
 def best_month(request, *args, **kwargs):
-    days_ago = datetime.now().replace(day=1, month=1)
+    days_before = datetime.now().replace(day=1, month=1)
+    match_condition = {'death_date': {'$gte': days_before}}
+    if request.user.group_user_id is not None:
+        match_condition['group_id'] = request.user.group_user_id
     pipeline = [
         {
-            '$match': {
-                'death_date': {'$gte': days_ago}
-            }
+            '$match': match_condition
         },
         {
             '$group': {
@@ -301,6 +308,8 @@ def best_month(request, *args, **kwargs):
     stats_dict = {}
     for stat in stats:
         stats_dict[stat.get('categories')] = stat.get('data')
+    if not stats_dict:
+        return Response({}, status = status.HTTP_200_OK)
     month = max(stats_dict, key=stats_dict.get)
     month_names = {
         '01': 'Janeiro',

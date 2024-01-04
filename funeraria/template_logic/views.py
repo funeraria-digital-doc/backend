@@ -1,7 +1,7 @@
 import io
 from record_templates.serializers import RecordTemplateSerializer
 
-from template_logic.helpers.helper import  editDocument, get_doc_variables, getDbKeysToDoc, hasDuplicates
+from template_logic.helpers.helper import  convertFileToImage, editDocument, get_doc_variables, getDbKeysToDoc, hasDuplicates
 from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
 from rest_framework import status
@@ -156,6 +156,7 @@ def upload(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def download(request, *args, **kwargs):
+    forceSave = request.data.get('forceSave')
     if not TemplateLogic.objects.filter(id=kwargs.get('template_pk')).exists():
         return Response({"error" : "Template does not exist!"},status=status.HTTP_404_NOT_FOUND)
     template = TemplateLogic.objects.filter(id=kwargs.get('template_pk')).values('id', 'file', 'validations', 'file_validations', 'group_id', 'title').first()
@@ -164,12 +165,12 @@ def download(request, *args, **kwargs):
          return Response({"error" : "O template não existe para esta declaração."}, status = status.HTTP_400_BAD_REQUEST)
     if record is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
-    if request.data.get('to_send_option') not in dict(SEND_TYPE_CHOICES):
+    if request.data.get('data').get('to_send_option') not in dict(SEND_TYPE_CHOICES):
         return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)   
     #doc = {}
     doc_response = {}
-    if request.data.get('to_send_option') == "DOCUMENT" or request.data.get('to_send_option') == "DOCUMENT_EMAIL":
-        validate_data = run_template_validations(template.get('validations'), request.data.get('validations'), "DOWNLOAD")
+    if request.data.get('data').get('to_send_option') == "DOCUMENT" or request.data.get('data').get('to_send_option') == "DOCUMENT_EMAIL" or request.data.get('data').get('to_send_option') == "IMAGE":
+        validate_data = run_template_validations(template.get('validations'), request.data.get('data').get('validations'), "DOWNLOAD")
         if not validate_data.get('success') :
             return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
         if validate_data.get('success'):
@@ -180,34 +181,65 @@ def download(request, *args, **kwargs):
             keys_missing = []
             doc_variables = get_doc_variables(template, True, True)
             getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys_missing, record)
-            if len(keys_missing) > 0:
-                return Response({'sucess' : False, "keys_missing" :keys_missing }, status=status.HTTP_400_BAD_REQUEST)
+            missingVars = []
+            for variable in changeVariablesObject.get('variables'):
+                #changeVariablesObject.get('variables').get(variable) == '' or 
+                if changeVariablesObject.get('variables').get(variable) is None:
+                    for val in template.get('validations'):
+                        if val.get('name') == variable:
+                            if val.get('is_field_custom'):
+                                missingVars.append({
+                                    'is_field_custom' : val.get('is_field_custom'), 
+                                    'label': val.get('label') if val.get('label') is not None else val.get('name'),
+                                    'variable' : variable
+                                })
+                            else:
+                                canSave = True
+                                for miss in missingVars:
+                                    if not miss.get('is_field_custom') and miss.get('db_field_reference') ==  val.get('db_field_reference'):
+                                        canSave = False
+                                if canSave:
+                                    missingVars.append({
+                                        'is_field_custom': val.get('is_field_custom'),
+                                        'db_collection': val.get('db_collection'),
+                                        'db_field_reference': val.get('db_field_reference'),
+                                        'variable' : variable
+                                    })
+            if len(missingVars) > 0 and not forceSave:
+                return Response({'sucess' : False, "missingVars" :missingVars }, status=status.HTTP_200_OK)
             else:
-                editDocRes = editDocument(template, changeVariablesObject)  
-                document = editDocRes.get('doc')
-                #doc = document
-                buffer = io.BytesIO()
-                document.save(buffer)
-                buffer.seek(0)
-                base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                doc_response['file'] = base64_data
-                data = {
-                    'template' : template.get('id'),
-                    'record' : record.get('id'),
-                    'answers' : changeVariablesObject.items()
-                }
-                recordTemplateSerializer = RecordTemplateSerializer(data = data)
-                
-                logger.info('saving to record_templates')
-                if recordTemplateSerializer.is_valid():
-                    try:            
-                        recordTemplateSerializer.save()
-                        logger.info('saved to record_templates')
-                    except:
-                        logger.info('error saving to record_templates')
+                if len(keys_missing) > 0:
+                    return Response({'sucess' : False, "keys_missing" :keys_missing }, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    logger.info(recordTemplateSerializer.errors)
-                    logger.info('error saving to record_templates')
+                    editDocRes = editDocument(template, changeVariablesObject)  
+                    document = editDocRes.get('doc')
+                    #doc = document
+                    buffer = io.BytesIO()
+                    document.save(buffer)
+                    buffer.seek(0)
+
+                    if request.data.get('data').get('to_send_option') == "IMAGE":
+                        convertFileToImage(buffer, doc_response)
+                    
+                    base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    doc_response['file'] = base64_data
+                    data = {
+                        'template' : template.get('id'),
+                        'record' : record.get('id'),
+                        'answers' : changeVariablesObject.items()
+                    }
+                    recordTemplateSerializer = RecordTemplateSerializer(data = data)
+                    
+                    logger.info('saving to record_templates')
+                    if recordTemplateSerializer.is_valid():
+                        try:            
+                            recordTemplateSerializer.save()
+                            logger.info('saved to record_templates')
+                        except:
+                            logger.info('error saving to record_templates')
+                    else:
+                        logger.info(recordTemplateSerializer.errors)
+                        logger.info('error saving to record_templates')
             
                 #return response
 

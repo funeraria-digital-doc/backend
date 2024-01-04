@@ -7,6 +7,7 @@ urlpatterns = [
     path('get-record/<int:pk>/', views.view, name='view'),
     path('remove/<int:pk>/', views.remove, name='remove'),
     path('list/', views.list, name='list'),
+    path('list-by-status/<str:status>/', views.listByStatus, name='listByStatus'),
     path('update-many-status/', views.updateManyStatus, name='updateManyStatus'),
     
 ]

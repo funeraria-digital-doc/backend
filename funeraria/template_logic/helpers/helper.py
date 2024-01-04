@@ -1,5 +1,4 @@
-from docxtpl import DocxTemplate, InlineImage
-from docx.shared import Mm
+from docxtpl import DocxTemplate
 import base64
 from io import BytesIO
 from rest_framework.response import Response
@@ -10,6 +9,15 @@ from groups.models import Group
 import io
 import logging
 from dateutil.parser import parse
+from PIL import Image
+import mammoth
+import pdfkit
+import fitz
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from docx import Document
+import docx
+from reportlab.platypus import Image
 logger = logging.getLogger(__name__)
 
 recordLabels = {
@@ -87,7 +95,6 @@ def convert_to_babel_format(python_format):
     babel_format = python_format
     for py_directive, babel_pattern in format_mapping.items():
         babel_format = babel_format.replace(py_directive, babel_pattern)
-
     return babel_format
 
 def editDocument(template, data):
@@ -148,8 +155,8 @@ def getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys
     validations = {item['name']: item for item in template.get('validations')}
     file_validations = {item['name']: item for item in template.get('file_validations')}
     for variable in doc_variables['vars']:
-        if variable in request.data.get('validations'):
-            changeVariablesObject['variables'][variable] = request.data.get('validations')[variable]
+        if variable in request.data.get('data').get('validations'):
+            changeVariablesObject['variables'][variable] = request.data.get('data').get('validations')[variable]
     for fileKey,fileValidation in file_validations.items():
         if not fileKey in changeVariablesObject['files']:
             if "is_blocked" in fileValidation and fileValidation.get("is_blocked"):
@@ -167,7 +174,7 @@ def getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys
                     recordField = record.get(fileValidation.get("db_field_reference"))
                     changeVariablesObject['files'][fileKey] = recordField.split(',')[1] if recordField else recordField
             else: 
-                changeVariablesObject['files'][fileKey] = request.data.get('file_validations')[fileKey].split(',')[1]     
+                changeVariablesObject['files'][fileKey] = request.data.get('data').get('file_validations')[fileKey].split(',')[1]     
     for key,validation in validations.items():
         if not key in changeVariablesObject['variables']:
             if "is_field_custom" in validation and not validation.get("is_field_custom") and "db_collection" in validation:
@@ -195,7 +202,7 @@ def getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys
                         date = format_datetime(nowDate,dateFormat, locale='pt_PT')
                         changeVariablesObject['variables'][key] = date
                 if 'field_type' in validation and validation.get("field_type") in ["DATE", "TIME", 'DATETIME'] and 'format' in validation and key in changeVariablesObject['variables']:
-                    date = ''
+                    date = None
                     if changeVariablesObject['variables'][key]:
                         if 'is_date_numeric' in validation and not validation.get('is_date_numeric'):
                             date = getNumericDate(validation, request, key, changeVariablesObject['variables'])
@@ -221,7 +228,7 @@ def getDbKeysToDoc(request, template, changeVariablesObject, doc_variables, keys
 
 def getNumericDate(validation, request, key, changeVariablesObject):
     getFormat =  getFullDate(validation.get('format'), False)
-    dateValue = request.data.get('validations')[key] if validation.get("is_field_custom") else str(changeVariablesObject[key].strftime(getFormat))
+    dateValue = request.data.get('data').get('validations')[key] if validation.get("is_field_custom") else str(changeVariablesObject[key].strftime(getFormat))
     newdate = datetime.strptime(dateValue, getFormat)
     dateFormat = convert_to_babel_format(getFullDate(validation.get('format'), True)).replace("''", "")
     date = format_datetime(newdate,dateFormat, locale='pt_PT')
@@ -257,3 +264,116 @@ def hasDuplicates(validations):
 
 def getLabel(val, labels):
     return labels[val] if val in labels else ''
+
+
+def convertFileToImage(buffer, doc_response):
+    pdf = docx_to_pdf(buffer)
+    images = pdf_to_png(pdf)
+    doc_response['images'] = images
+    
+def docx_to_pdf(docx_stream):
+    # Load the .docx file
+    doc = Document(docx_stream)
+
+    # Create a PDF file
+    pdf_output = io.BytesIO()
+    pdf_canvas = canvas.Canvas(pdf_output, pagesize=letter)
+
+    # Set the initial coordinates
+    x = 10
+    y = 750  # Adjust this value as needed
+
+    # Iterate through each element in the .docx document
+    for element in doc.element.body:
+        if isinstance(element, docx.text.paragraph.Paragraph):
+            # Extract and draw text onto the PDF
+            text = element.text
+            pdf_canvas.drawString(x, y, text)
+
+            # Move to the next line
+            y -= 15  # Adjust this value as needed
+        elif isinstance(element, docx.picture.Picture):
+            # Extract the image data
+            image_data = element.image.stream.read()
+
+            # Create an Image object
+            image = Image(image_data)
+
+            # Draw the image onto the PDF
+            image.drawOn(pdf_canvas, x, y)
+
+            # Move to the next line
+            y -= image.height  # Adjust this value as needed
+
+    # Save the PDF file
+    pdf_canvas.save()
+    pdf_output.seek(0)
+
+    return pdf_output
+    # result = mammoth.convert_to_html(docx_stream)
+    # options = {
+    #     'minimum-font-size': '20',  # Set minimum font size to 20
+    #     'zoom': 1.25,  
+    # }
+    
+    # html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' + result.value + '</body></html>'
+    # pdf = pdfkit.from_string(html, False, options)
+    # pdf_stream = io.BytesIO(pdf)
+    # return pdf_stream
+
+
+def pdf_to_png(pdf_stream):
+    pdf_reader = fitz.open(stream=pdf_stream.read(), filetype="pdf")
+    png_images = []
+    logger.info("páginas")
+    logger.info(len(pdf_reader))
+    for page_num in range(len(pdf_reader)):
+        pdf_page = pdf_reader[page_num]
+        # Define the zoom factor
+        zoom = 3  # Adjust this value as needed
+
+        # Create a transformation matrix
+        mat = fitz.Matrix(zoom, zoom)
+
+        # Get the pixmap with the transformation matrix
+        img = pdf_page.get_pixmap(matrix=mat)
+       
+        # Create a PIL Image from raw image data
+        pil_image = Image.frombytes("RGB", (img.width, img.height), img.samples)
+
+        # Save the PIL Image to a BytesIO stream
+        img_bytesio = BytesIO()
+        pil_image.save(img_bytesio, format="PNG")
+
+        # Convert PNG image data to base64
+        img_base64 = base64.b64encode(img_bytesio.getvalue()).decode('utf-8')
+        png_images.append(img_base64)
+
+    return png_images
+
+def test(buffer, doc_response):
+    import mammoth
+    import imgkit
+    imagesBase64 = []
+    result = mammoth.convert_to_html(buffer)
+    html_content = result.value
+    img = imgkit.from_string(html_content, False)
+
+    # Create a BytesIO object
+    img_io = io.BytesIO()
+
+    # Write the image to the BytesIO object
+    img_io.write(img)
+
+    # Seek to the beginning of the BytesIO object
+    img_io.seek(0)
+
+    # Read the image into a byte array
+    image_bytes = img_io.read()
+
+    # Encode the byte array to a base64 string
+    base64_str = base64.b64encode(image_bytes).decode('utf-8')
+    imagesBase64.append(base64_str)
+
+
+    doc_response['images'] =  imagesBase64

@@ -100,10 +100,10 @@ def remove(request, *args, **kwargs):
 @permission_classes([IsAuthenticated])
 def list(request, *args, **kwargs):
     if request.user.is_superuser:
-        records = Record.objects.all().values('id','name','family_member_phone','gender','group_id','email','status')
+        records = Record.objects.filter(status='ACTIVE').values('id','name','family_member_phone','gender','group_id','email','status')
         return Response(records, status = status.HTTP_200_OK)
     else:
-        records = Record.objects.filter(group_id=request.user.group_user_id).values('id','name','family_member_phone','gender','group_id','email','status')
+        records = Record.objects.filter(group_id=request.user.group_user_id,status='ACTIVE').values('id','name','family_member_phone','gender','group_id','email','status')
         return Response(records, status = status.HTTP_200_OK)
 
 
@@ -122,6 +122,20 @@ def updateManyStatus(request, *args, **kwargs):
         logger.info(e) 
         return Response({"success" : False, "errors" : "Erro ao atualizar declarações!"}, status=status.HTTP_400_BAD_REQUEST)
        
+@swagger_auto_schema(
+    method='get',
+    operation_description="List all records"
+) 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def listByStatus(request, *args, **kwargs):
+    if request.user.is_superuser:
+        records = Record.objects.filter(status=kwargs.get('status')).values('id','name','family_member_phone','gender','group_id','email','status')
+        return Response(records, status = status.HTTP_200_OK)
+    else:
+        records = Record.objects.filter(group_id=request.user.group_user_id,status=kwargs.get('status')).values('id','name','family_member_phone','gender','group_id','email','status')
+        return Response(records, status = status.HTTP_200_OK)
+
 
 
 

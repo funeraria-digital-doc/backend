@@ -82,6 +82,7 @@ SEND_TYPE_CHOICES = (
     ('NONE','NONE'), 
     ('DOCUMENT','Document'), 
     ('EMAIL','Email'),
+    ('IMAGE','Image'),
     ('DOCUMENT_EMAIL','Document and Email')
 ) 
 
