@@ -9,15 +9,12 @@ from groups.models import Group
 import io
 import logging
 from dateutil.parser import parse
-from PIL import Image
-import mammoth
-import pdfkit
+from PIL import Image as PilImage
 import fitz
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from docx import Document
-import docx
-from reportlab.platypus import Image
+import subprocess
+import tempfile
+import os
+
 logger = logging.getLogger(__name__)
 
 recordLabels = {
@@ -267,63 +264,54 @@ def getLabel(val, labels):
 
 
 def convertFileToImage(buffer, doc_response):
-    pdf = docx_to_pdf(buffer)
+    pdf = convert_docx_to_pdf_in_memory(buffer)
+    doc_response['pdf'] = base64.b64encode(pdf.getvalue()).decode('utf-8')
     images = pdf_to_png(pdf)
     doc_response['images'] = images
+
+
+def convert_docx_to_pdf_in_memory(docx_bytesio):
+    temp_docx = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
+    temp_pdf = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    pdf_bytesio = BytesIO()
+    # Create a temporary directory to store intermediate files
+    try:
+        temp_docx_path = temp_docx.name
+        temp_pdf_path = temp_pdf.name
+
+        # Write the DOCX content to the temporary file
+        temp_docx.write(docx_bytesio.read())
+
+        # Convert DOCX to PDF using pandoc
+        command = ["pandoc", "--from=docx", "--to=pdf", "-o", temp_pdf_path, temp_docx_path, "--pdf-engine=xelatex", "--variable=geometry:left=1in,right=1in,top=1in,bottom=1in,paper=a4paper", "-V" , "--variable=geometry:pagestyle=empty"]
+        try:
+            subprocess.run(command, check=True, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            logger.info("Error:", e)
+            logger.info("Standard Error Output:", e.stderr.decode())
+        # Read the PDF content into the BytesIO object
+        
+        if os.path.exists(temp_pdf_path):
+            with open(temp_pdf_path, 'rb') as pdf_file:
+                pdf_bytesio.write(pdf_file.read())
+            pdf_bytesio.seek(0)
+        else:
+            print(f"Error: PDF file not found at {temp_pdf_path}")
+        # Reset the BytesIO object to its initial position
+        #pdf_bytesio.seek(0)
+    except Exception as e:
+        logger.info(e)
+    finally:
+        # Clean up temporary files
+        os.remove(temp_docx_path)
+        os.remove(temp_pdf_path)
+    return pdf_bytesio
     
-def docx_to_pdf(docx_stream):
-    # Load the .docx file
-    doc = Document(docx_stream)
-
-    # Create a PDF file
-    pdf_output = io.BytesIO()
-    pdf_canvas = canvas.Canvas(pdf_output, pagesize=letter)
-
-    # Set the initial coordinates
-    x = 10
-    y = 750  # Adjust this value as needed
-
-    # Iterate through each element in the .docx document
-    for element in doc.element.body:
-        if isinstance(element, docx.text.paragraph.Paragraph):
-            # Extract and draw text onto the PDF
-            text = element.text
-            pdf_canvas.drawString(x, y, text)
-
-            # Move to the next line
-            y -= 15  # Adjust this value as needed
-        elif isinstance(element, docx.picture.Picture):
-            # Extract the image data
-            image_data = element.image.stream.read()
-
-            # Create an Image object
-            image = Image(image_data)
-
-            # Draw the image onto the PDF
-            image.drawOn(pdf_canvas, x, y)
-
-            # Move to the next line
-            y -= image.height  # Adjust this value as needed
-
-    # Save the PDF file
-    pdf_canvas.save()
-    pdf_output.seek(0)
-
-    return pdf_output
-    # result = mammoth.convert_to_html(docx_stream)
-    # options = {
-    #     'minimum-font-size': '20',  # Set minimum font size to 20
-    #     'zoom': 1.25,  
-    # }
     
-    # html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' + result.value + '</body></html>'
-    # pdf = pdfkit.from_string(html, False, options)
-    # pdf_stream = io.BytesIO(pdf)
-    # return pdf_stream
-
-
 def pdf_to_png(pdf_stream):
+    
     pdf_reader = fitz.open(stream=pdf_stream.read(), filetype="pdf")
+    logger.info(pdf_reader)
     png_images = []
     logger.info("páginas")
     logger.info(len(pdf_reader))
@@ -337,9 +325,9 @@ def pdf_to_png(pdf_stream):
 
         # Get the pixmap with the transformation matrix
         img = pdf_page.get_pixmap(matrix=mat)
-       
+        #logger.info(img.samples)
         # Create a PIL Image from raw image data
-        pil_image = Image.frombytes("RGB", (img.width, img.height), img.samples)
+        pil_image = PilImage.frombytes("RGB", (img.width, img.height), img.samples)
 
         # Save the PIL Image to a BytesIO stream
         img_bytesio = BytesIO()
@@ -351,29 +339,4 @@ def pdf_to_png(pdf_stream):
 
     return png_images
 
-def test(buffer, doc_response):
-    import mammoth
-    import imgkit
-    imagesBase64 = []
-    result = mammoth.convert_to_html(buffer)
-    html_content = result.value
-    img = imgkit.from_string(html_content, False)
 
-    # Create a BytesIO object
-    img_io = io.BytesIO()
-
-    # Write the image to the BytesIO object
-    img_io.write(img)
-
-    # Seek to the beginning of the BytesIO object
-    img_io.seek(0)
-
-    # Read the image into a byte array
-    image_bytes = img_io.read()
-
-    # Encode the byte array to a base64 string
-    base64_str = base64.b64encode(image_bytes).decode('utf-8')
-    imagesBase64.append(base64_str)
-
-
-    doc_response['images'] =  imagesBase64

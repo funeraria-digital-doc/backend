@@ -60,6 +60,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'status', 'is_staff', 'is_superuser', 'group_user']
     
     def create(self, validated_data):
+        request = self.context.get('request')
         if validated_data['status'] is None:
             validated_data['status'] = User.Status.ACTIVE
         request = self.context.get('request')

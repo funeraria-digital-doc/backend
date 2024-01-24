@@ -1,20 +1,24 @@
-from rest_framework.decorators import api_view, permission_classes,authentication_classes
+from rest_framework.decorators import api_view, permission_classes
+#,authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from accounts.serealizers import EditProfileSerializer, ProfilePictureUploadSerializer, CreateUserSerializer, EditUserSerializer
 from accounts.models import User
-from rest_framework.authtoken.models import Token
+#from rest_framework.authtoken.models import Token
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
-from rest_framework.decorators import parser_classes
-from funeraria.permissions import IsAdmin, IsAdminOrUpper, IsSuperUser, isEqualOrUpperPermission
+#from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
+#from rest_framework.decorators import parser_classes
+from funeraria.permissions import  IsAdminOrUpper
+#, IsSuperUser, isEqualOrUpperPermission,IsAdmin
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import F
+from django.contrib.auth.models import update_last_login
 import logging
 logger = logging.getLogger(__name__)
+
 
 @swagger_auto_schema(       
     method='post',
@@ -40,13 +44,14 @@ def login(request):
             refresh['name']= user.username
             refresh['email']= user.email
             refresh['role']= getRole(user)
+            update_last_login(None, user)
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token)
             },status=status.HTTP_200_OK)
     else:
         return Response('Nome ou palavra-passe são obrigatórios.',status=status.HTTP_200_OK)
-
+    
 @swagger_auto_schema(       
     method='post',
     operation_description="Change user Password",
@@ -198,8 +203,6 @@ def list_all_users(request):
         return Response({"error" : "Nenhum utilizador encontrado!"},status=status.HTTP_404_NOT_FOUND)
     return Response({"users" : users, "message" : "Utilizadores encontrados com sucesso!"}, status=status.HTTP_200_OK)  
 
-
-
 @swagger_auto_schema(
     method='post',
     request_body=CreateUserSerializer,
@@ -231,7 +234,7 @@ def create_new_user(request, *args, **kwargs):
             return Response({'erro' : error}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
     else:
         data = serializer.errors
-        return Response({'erro' : data}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
+        return Response({'erro' : data}, status=status.HTTP_400_BAD_REQUEST)   
     
 @swagger_auto_schema(
     method='post',

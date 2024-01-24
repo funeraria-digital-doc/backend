@@ -52,10 +52,16 @@ def create(request, *args, **kwargs):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def view(request, *args, **kwargs):
-    record = Record.objects.filter(pk=kwargs.get('pk')).values().first()
-    if record is None:
-        return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
-    return Response(record, status = status.HTTP_200_OK)
+    try:
+        record = Record.objects.filter(pk=kwargs.get('pk')).values().first()
+        if record is None:
+            return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
+        return Response(record, status = status.HTTP_200_OK)
+    except Exception as e:
+        logger.info('error')
+        logger.info(e)
+        return Response({"errors" : "Não foi possivel carregar esta declaração!"}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @swagger_auto_schema(
     method='post',
@@ -65,19 +71,24 @@ def view(request, *args, **kwargs):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def update(request, *args, **kwargs):
-    recordInstance = Record.objects.filter(pk=kwargs.get('pk')).first() 
-    record = request.data
-    serializer = RecordUpdateSerializer(data = record,instance=recordInstance, partial=True)   
-    if serializer.is_valid():
-        if record is None:
-                return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
-        try:          
-            serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
-            return Response(serializer.data, status = status.HTTP_200_OK)
-        except:
-            return Response({'errors' : "Algo correu mal a atualizar a declaração","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
-    else:
-        return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
+    try:
+        recordInstance = Record.objects.filter(pk=kwargs.get('pk')).first() 
+        record = request.data
+        serializer = RecordUpdateSerializer(data = record,instance=recordInstance, partial=True)   
+        if serializer.is_valid():
+            if record is None:
+                    return Response({"errors" : "Declaração não existe!"}, status = status.HTTP_404_NOT_FOUND)
+            try:          
+                serializer.update(instance = recordInstance, validated_data=serializer.validated_data)
+                return Response(serializer.data, status = status.HTTP_200_OK)
+            except:
+                return Response({'errors' : "Algo correu mal a atualizar a declaração","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({'errors' : serializer.errors}, status = status.HTTP_400_BAD_REQUEST)   
+    except Exception as e:
+        logger.info('error')
+        logger.info(e)
+        return Response({"errors" : "Não foi possivel editar esta declaração!"}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method='post',
@@ -86,11 +97,16 @@ def update(request, *args, **kwargs):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def remove(request, *args, **kwargs):
-    record = Record.objects.filter(id=kwargs.get('pk')).first()
-    if record is None:
-        return Response({"errors" : "Declaração não existe!"},status=status.HTTP_404_NOT_FOUND)
-    record.delete()
-    return Response({"success" : "Declaração eliminada com sucesso!"}, status=status.HTTP_200_OK)
+    try:
+        record = Record.objects.filter(id=kwargs.get('pk')).first()
+        if record is None:
+            return Response({"errors" : "Declaração não existe!"},status=status.HTTP_404_NOT_FOUND)
+        record.delete()
+        return Response({"success" : "Declaração eliminada com sucesso!"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.info('error')
+        logger.info(e)
+        return Response({"errors" : "Não foi possivel carregar esta declaração!"}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @swagger_auto_schema(
     method='get',
