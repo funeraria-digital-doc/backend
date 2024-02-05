@@ -262,10 +262,8 @@ def hasDuplicates(validations):
 def getLabel(val, labels):
     return labels[val] if val in labels else ''
 
-
 def convertFileToImage(buffer, doc_response):
     logger.info('doc_response')
-    #pdf = convert_docx_to_pdf_in_memory(buffer)
     temp_docx = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
     temp_docx.write(buffer.read())
     try:
@@ -277,83 +275,11 @@ def convertFileToImage(buffer, doc_response):
         logger.info("Failed to convert to pdf - %s", e)
     os.remove(temp_docx.name)
     
-    
-
-def convert_docx_to_pdf_in_memory(docx_bytesio):
-    temp_docx = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
-    temp_pdf = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-    pdf_bytesio = BytesIO()
-    # Create a temporary directory to store intermediate files
-    try:
-        temp_docx_path = temp_docx.name
-        temp_pdf_path = temp_pdf.name
-
-        # Write the DOCX content to the temporary file
-        temp_docx.write(docx_bytesio.read())
-
-        # Convert DOCX to PDF using pandoc
-        command = ["pandoc", "--from=docx", "--to=pdf", "-o", temp_pdf_path, temp_docx_path, "--pdf-engine=xelatex", "--reference-doc=temp_docx_path", "--variable=geometry:left=1in,right=1in,top=1in,bottom=1in,paper=a4paper", "-V" , "--variable=geometry:pagestyle=empty"]
-        try:
-            subprocess.run(command, check=True, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            logger.info("Error:", e)
-            logger.info("Standard Error Output:", e.stderr.decode())
-        # Read the PDF content into the BytesIO object
-        
-        if os.path.exists(temp_pdf_path):
-            with open(temp_pdf_path, 'rb') as pdf_file:
-                pdf_bytesio.write(pdf_file.read())
-            pdf_bytesio.seek(0)
-        else:
-            print(f"Error: PDF file not found at {temp_pdf_path}")
-        # Reset the BytesIO object to its initial position
-        #pdf_bytesio.seek(0)
-    except Exception as e:
-        logger.info(e)
-    finally:
-        # Clean up temporary files
-        os.remove(temp_docx_path)
-        os.remove(temp_pdf_path)
-    return pdf_bytesio
-      
-def pdf_to_png(pdf_stream):
-    
-    pdf_reader = fitz.open(stream=pdf_stream.read(), filetype="pdf")
-    logger.info(pdf_reader)
-    png_images = []
-    logger.info("páginas")
-    logger.info(len(pdf_reader))
-    for page_num in range(len(pdf_reader)):
-        pdf_page = pdf_reader[page_num]
-        # Define the zoom factor
-        zoom = 3  # Adjust this value as needed
-
-        # Create a transformation matrix
-        mat = fitz.Matrix(zoom, zoom)
-
-        # Get the pixmap with the transformation matrix
-        img = pdf_page.get_pixmap(matrix=mat)
-        #logger.info(img.samples)
-        # Create a PIL Image from raw image data
-        pil_image = PilImage.frombytes("RGB", (img.width, img.height), img.samples)
-
-        # Save the PIL Image to a BytesIO stream
-        img_bytesio = BytesIO()
-        pil_image.save(img_bytesio, format="PNG")
-
-        # Convert PNG image data to base64
-        img_base64 = base64.b64encode(img_bytesio.getvalue()).decode('utf-8')
-        png_images.append(img_base64)
-
-    return png_images
-
-#-----
 def check_tmp_folder(docx_bytesIO):
     if not os.path.exists(docx_bytesIO.name):
         os.makedirs(docx_bytesIO.name)
 
 def convert_to_pdf(docx_bytesIO):
-    import subprocess
     check_tmp_folder(docx_bytesIO)
     pdf_bytesio = BytesIO()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -373,4 +299,33 @@ def convert_to_pdf(docx_bytesIO):
                     else:
                         print(f"Error: PDF file not found at {path}")
     return pdf_bytesio
+
+def pdf_to_png(pdf_stream):
+    pdf_reader = fitz.open(stream=pdf_stream.read(), filetype="pdf")
+    logger.info(pdf_reader)
+    png_images = []
+    logger.info("páginas")
+    logger.info(len(pdf_reader))
+    for page_num in range(len(pdf_reader)):
+        pdf_page = pdf_reader[page_num]
+        # Define the zoom factor
+        zoom = 3  # Adjust this value as needed
+        # Create a transformation matrix
+        mat = fitz.Matrix(zoom, zoom)
+
+        # Get the pixmap with the transformation matrix
+        img = pdf_page.get_pixmap(matrix=mat)
+        #logger.info(img.samples)
+        # Create a PIL Image from raw image data
+        pil_image = PilImage.frombytes("RGB", (img.width, img.height), img.samples)
+
+        # Save the PIL Image to a BytesIO stream
+        img_bytesio = BytesIO()
+        pil_image.save(img_bytesio, format="PNG")
+
+        # Convert PNG image data to base64
+        img_base64 = base64.b64encode(img_bytesio.getvalue()).decode('utf-8')
+        png_images.append(img_base64)
+
+    return png_images
 
