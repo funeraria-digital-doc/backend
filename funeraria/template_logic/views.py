@@ -217,7 +217,6 @@ def download(request, *args, **kwargs):
                     buffer = io.BytesIO()
                     document.save(buffer)
                     buffer.seek(0)
-
                     if request.data.get('data').get('to_send_option') == "IMAGE":
                         convertFileToImage(buffer, doc_response)
                     

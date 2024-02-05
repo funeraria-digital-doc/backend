@@ -24,3 +24,4 @@ PyMuPDF==1.23.8
 pandoc
 pdflatex
 pypandoc
+djangoconvertvdoctopdf

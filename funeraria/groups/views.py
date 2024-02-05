@@ -50,8 +50,8 @@ def create(request, *args, **kwargs):
 def view(request, *args, **kwargs):
     group = Group.objects.filter(pk=kwargs.get('pk')).values().first()
     if group is None:
-        return Response({"error" : "Group does not exist!"}, status = status.HTTP_200_OK)
-    return Response(group, status = status.HTTP_404_NOT_FOUND)
+        return Response({"error" : "Group does not exist!"}, status = status.HTTP_404_NOT_FOUND)
+    return Response(group, status = status.HTTP_200_OK) 
 
 @swagger_auto_schema(
     method='post',

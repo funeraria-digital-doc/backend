@@ -198,7 +198,9 @@ def list_all_users(request):
             group=F('group_user_id')
         ).values('id','is_superuser','username','email','is_staff','status','group')
     else:
-        users = User.objects.filter(group_user_id=request.user.group_user_id).values('id','username','email','is_staff','status')
+        users = User.objects.filter(group_user_id=request.user.group_user_id).annotate(
+            group=F('group_user_id')
+        ).values('id','username','email','is_staff','status','group','is_superuser')
     if users is None:
         return Response({"error" : "Nenhum utilizador encontrado!"},status=status.HTTP_404_NOT_FOUND)
     return Response({"users" : users, "message" : "Utilizadores encontrados com sucesso!"}, status=status.HTTP_200_OK)  
@@ -275,9 +277,8 @@ def edit_user(request, *args, **kwargs):
                 response['email'] = newUser.email
                 response['is_staff'] = newUser.is_staff
                 response['status'] = newUser.status
-                if request.user and request.user.is_superuser:
-                    response['is_superuser'] = newUser.is_superuser
-                    response['group'] = user.group_user.id if user.group_user is not None else None
+                response['is_superuser'] = newUser.is_superuser
+                response['group'] = user.group_user.id if user.group_user is not None else None
                 return Response(response, status = status.HTTP_200_OK)
             except:
                 return Response({'error' : "Algo correu mal ao atualizar o utilizador","data" : serializer.errors}, status = status.HTTP_404_NOT_FOUND)

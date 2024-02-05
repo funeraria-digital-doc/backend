@@ -264,11 +264,20 @@ def getLabel(val, labels):
 
 
 def convertFileToImage(buffer, doc_response):
-    pdf = convert_docx_to_pdf_in_memory(buffer)
-    doc_response['pdf'] = base64.b64encode(pdf.getvalue()).decode('utf-8')
-    images = pdf_to_png(pdf)
-    doc_response['images'] = images
-
+    logger.info('doc_response')
+    #pdf = convert_docx_to_pdf_in_memory(buffer)
+    temp_docx = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
+    temp_docx.write(buffer.read())
+    try:
+        pdf = convert_to_pdf(temp_docx)
+        doc_response['pdf'] = base64.b64encode(pdf.getvalue()).decode('utf-8')
+        images = pdf_to_png(pdf)
+        doc_response['images'] = images
+    except Exception as e:
+        logger.info("Failed to convert to pdf - %s", e)
+    os.remove(temp_docx.name)
+    
+    
 
 def convert_docx_to_pdf_in_memory(docx_bytesio):
     temp_docx = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
@@ -283,7 +292,7 @@ def convert_docx_to_pdf_in_memory(docx_bytesio):
         temp_docx.write(docx_bytesio.read())
 
         # Convert DOCX to PDF using pandoc
-        command = ["pandoc", "--from=docx", "--to=pdf", "-o", temp_pdf_path, temp_docx_path, "--pdf-engine=xelatex", "--variable=geometry:left=1in,right=1in,top=1in,bottom=1in,paper=a4paper", "-V" , "--variable=geometry:pagestyle=empty"]
+        command = ["pandoc", "--from=docx", "--to=pdf", "-o", temp_pdf_path, temp_docx_path, "--pdf-engine=xelatex", "--reference-doc=temp_docx_path", "--variable=geometry:left=1in,right=1in,top=1in,bottom=1in,paper=a4paper", "-V" , "--variable=geometry:pagestyle=empty"]
         try:
             subprocess.run(command, check=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
@@ -306,8 +315,7 @@ def convert_docx_to_pdf_in_memory(docx_bytesio):
         os.remove(temp_docx_path)
         os.remove(temp_pdf_path)
     return pdf_bytesio
-    
-    
+      
 def pdf_to_png(pdf_stream):
     
     pdf_reader = fitz.open(stream=pdf_stream.read(), filetype="pdf")
@@ -339,4 +347,30 @@ def pdf_to_png(pdf_stream):
 
     return png_images
 
+#-----
+def check_tmp_folder(docx_bytesIO):
+    if not os.path.exists(docx_bytesIO.name):
+        os.makedirs(docx_bytesIO.name)
+
+def convert_to_pdf(docx_bytesIO):
+    import subprocess
+    check_tmp_folder(docx_bytesIO)
+    pdf_bytesio = BytesIO()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            subprocess.run(['lowriter', '--convert-to', 'pdf', docx_bytesIO.name, '--outdir', tmpdir], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Conversion failed: {e}")
+        else:
+            print("Conversion successful")
+            for file_name in os.listdir(tmpdir):
+                if file_name.endswith(".pdf"):
+                    path = os.path.join(tmpdir, file_name)
+                    if os.path.exists(path):
+                        with open(path, 'rb') as pdf_file:
+                            pdf_bytesio.write(pdf_file.read())
+                        pdf_bytesio.seek(0)
+                    else:
+                        print(f"Error: PDF file not found at {path}")
+    return pdf_bytesio
 
