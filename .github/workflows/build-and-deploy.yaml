@@ -21,7 +21,7 @@ jobs:
 
         - name: get docker tag
           run: |
-            IMAGE_TAGS=$(gcloud container images list-tags gcr.io/PROJECT_ID/YOUR_IMAGE_NAME --limit=1 --sort-by=~timestamp --format='get(tags)')
+            IMAGE_TAGS=$(gcloud container images list-tags ${{ secrets.GCP_GCR }} --limit=1 --sort-by=~timestamp --format='get(tags)')
             echo "IMAGE_TAGS=$IMAGE_TAGS" >> $GITHUB_ENV
             echo IMAGE_TAGS
 
