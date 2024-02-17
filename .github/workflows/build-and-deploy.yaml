@@ -37,9 +37,9 @@ jobs:
             echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
             echo $NEW_TAGIMAGE_TAGS
 
-        # - name: docker build
-        #   run: |
-        #     docker build -t ${{ secrets.GCP_GCR }}:v1.1.1 .
+        - name: docker build
+          run: |
+            docker build -t ${{ secrets.GCP_GCR }}:$NEW_TAG .
         
         # - name: docker push
         #   run: |
