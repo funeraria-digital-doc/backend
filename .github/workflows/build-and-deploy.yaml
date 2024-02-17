@@ -33,12 +33,11 @@ jobs:
             # Set the new tag as an environment variable
             echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
             echo $NEW_TAGIMAGE_TAGS
+            
         - name: docker-compose build
           run: |
             docker-compose build
-        # - name: docker build 
-        #   run: |
-        #     docker build -t ${{ secrets.GCP_GCR }}:$NEW_TAG .
+
         - name: Docker tag
           run: |
             docker tag backend_funeraria ${{ secrets.GCP_GCR }}:$NEW_TAG
@@ -47,7 +46,7 @@ jobs:
           run: |
             docker push ${{ secrets.GCP_GCR }}:$NEW_TAG
             
-        # - name: Deploy to Cloud Run
-        #   run: |
-        #     gcloud run deploy funeraria-backend --image ${{ secrets.GCP_GCR }}:$NEW_TAG --region us-central1 --platform managed
+        - name: Deploy to Cloud Run
+          run: |
+            gcloud run deploy funeraria-backend --image ${{ secrets.GCP_GCR }}:$NEW_TAG --region us-central1 --platform managed
         
