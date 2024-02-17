@@ -21,7 +21,7 @@ jobs:
 
         - name: docker build
           run: |
-            docker build . -t ${{ secrets.GCP_GCR }} --name backend-funeraria
+            docker build . -t ${{ secrets.GCP_GCR }}
             docker tag backend-funeraria ${{ secrets.GCP_GCR }}
             docker push ${{ secrets.GCP_GCR }}
   
