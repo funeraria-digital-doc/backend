@@ -3,6 +3,7 @@ from django_currentuser.db.models import CurrentUserField
 from groups.models import Group
 import logging
 logger = logging.getLogger(__name__)
+
 class TemplateLogic(models.Model):
     title = models.CharField(max_length=255, null=True)
     file = models.CharField(max_length=10000000, null=True)
@@ -10,7 +11,7 @@ class TemplateLogic(models.Model):
     group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True)
     validations = models.JSONField(null=True, blank=True)
     file_validations = models.JSONField(null=True, blank=True)
-    send_type = models.CharField(max_length=255,null=True, blank=True, default="NONE")
+    send_type = models.JSONField()
     send_email_to = models.JSONField()
     send_email_to_cc = models.JSONField()
     send_email_to_bcc = models.JSONField()

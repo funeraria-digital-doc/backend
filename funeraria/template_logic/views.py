@@ -165,11 +165,12 @@ def download(request, *args, **kwargs):
          return Response({"error" : "O template não existe para esta declaração."}, status = status.HTTP_400_BAD_REQUEST)
     if record is None:
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
-    if request.data.get('data').get('to_send_option') not in dict(SEND_TYPE_CHOICES):
+    if not all(element in dict(SEND_TYPE_CHOICES) for element in request.data.get('data').get('to_send_option')):
         return Response({"error" : "Field to_send_option needs to be a valid choice", "choices" : dict(SEND_TYPE_CHOICES)}, status = status.HTTP_404_NOT_FOUND)   
     #doc = {}
     doc_response = {}
-    if request.data.get('data').get('to_send_option') == "DOCUMENT" or request.data.get('data').get('to_send_option') == "DOCUMENT_EMAIL" or request.data.get('data').get('to_send_option') == "IMAGE":
+    
+    if "DOCUMENT" in request.data.get('data').get('to_send_option') or "IMAGE" in request.data.get('data').get('to_send_option'):
         validate_data = run_template_validations(template.get('validations'), request.data.get('data').get('validations'), "DOWNLOAD")
         if not validate_data.get('success') :
             return Response({"success" : False,"errors" : validate_data.get('errors')}, status=status.HTTP_400_BAD_REQUEST)
@@ -217,7 +218,7 @@ def download(request, *args, **kwargs):
                     buffer = io.BytesIO()
                     document.save(buffer)
                     buffer.seek(0)
-                    if request.data.get('data').get('to_send_option') == "IMAGE":
+                    if 'IMAGE' in request.data.get('data').get('to_send_option'):
                         convertFileToImage(buffer, doc_response)
                     
                     base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')

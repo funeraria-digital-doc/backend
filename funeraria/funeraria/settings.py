@@ -118,6 +118,12 @@ DATABASES = {
         'ENFORCE_SCHEMA': True,
         'CONN_MAX_AGE': 3600*24,
         'CLIENT': {
+            # 'host': 'mongodb-dev',
+            # 'port' : 27017,
+            # 'password' : '***REMOVED-MONGO-PASSWORD***',
+            # 'username' : 'funerariadigitaldoc',
+            # 'authSource': 'admin',
+            # 'authMechanism' : 'SCRAM-SHA-1'
             'host':  'mongodb+srv://funerariadigitaldoc:***REMOVED-MONGO-PASSWORD***@funerariamongo.jbar8li.mongodb.net/?retryWrites=true&w=majority'
         }
     }

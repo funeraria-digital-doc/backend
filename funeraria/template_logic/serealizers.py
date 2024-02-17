@@ -79,11 +79,9 @@ DB_COLLECTION_CHOICES = (
 )
 
 SEND_TYPE_CHOICES = (
-    ('NONE','NONE'), 
     ('DOCUMENT','Document'), 
     ('EMAIL','Email'),
-    ('IMAGE','Image'),
-    ('DOCUMENT_EMAIL','Document and Email')
+    ('IMAGE','Image')
 ) 
 
 
@@ -196,10 +194,18 @@ class UploadSerializer(serializers.ModelSerializer):
     })
     validations = serializers.ListField(allow_empty=True, child = ValidationsSerializer())
     file_validations = serializers.ListField(allow_empty=True, child = FileValidationsSerializer())
-    send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, error_messages = {
-        "required": "Este campo é obrigatório",
-        "invalid_choice": "Opção inválida"
-    })
+    # send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, error_messages = {
+    #     "required": "Este campo é obrigatório",
+    #     "invalid_choice": "Opção inválida"
+    # })
+    send_type = serializers.ListField(
+        child = serializers.CharField(),
+        allow_empty = False,
+        error_messages = {
+            "required": "Este campo é obrigatório",
+            "invalid_choice": "Opção inválida"
+        }
+    )
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
@@ -216,9 +222,9 @@ class UploadSerializer(serializers.ModelSerializer):
             validation_errors['title'] = ['O campo "Título" é obrigatório.'] 
         if title is not None and len(str(title).strip()) > 0 and TemplateLogic.objects.filter(title = title, group = data_dict.get('group')).exists():
             validation_errors['title'] = ['O Título tem de ser único.']
-        if send_type in ["EMAIL","DOCUMENT_EMAIL"] and ('send_email_to' not in data_keys or ('send_email_to' in data_keys and (data_dict.get('send_email_to') == [] or data_dict.get('send_email_to') == None))):
+        if 'EMAIL' in send_type and ('send_email_to' not in data_keys or ('send_email_to' in data_keys and (data_dict.get('send_email_to') == [] or data_dict.get('send_email_to') == None))):
             validation_errors['send_email_to'] = ['O campo "Enviar email para" é obrigatório.']
-        if send_type in ["DOCUMENT","DOCUMENT_EMAIL"] and ('file' not in data_keys or ('file' in data_keys and (data_dict.get('file') == "" or data_dict.get('file') == None))):
+        if 'EMAIL' in send_type and ('file' not in data_keys or ('file' in data_keys and (data_dict.get('file') == "" or data_dict.get('file') == None))):
             validation_errors['file'] = ['O campo "Ficheiro" é obrigatório.']
 
         if validation_errors:
@@ -349,10 +355,18 @@ class EditUploadSerializer(serializers.ModelSerializer):
     })
     validations = serializers.ListField(allow_empty=True, allow_null = True, required= False, child = ValidationsSerializer())
     file_validations = serializers.ListField(allow_empty=True, allow_null = True, required= False, child = FileValidationsSerializer())
-    send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, allow_null = True, error_messages = {
-        "required": "Este campo é obrigatório",
-        "invalid_choice": "Opção inválida"
-    })
+    # send_type = serializers.ChoiceField(choices = SEND_TYPE_CHOICES, allow_null = True, error_messages = {
+    #     "required": "Este campo é obrigatório",
+    #     "invalid_choice": "Opção inválida"
+    # })
+    send_type = serializers.ListField(
+        child = serializers.CharField(),
+        allow_empty = False,
+        error_messages = {
+            "required": "Este campo é obrigatório",
+            "invalid_choice": "Opção inválida"
+        }
+    )
     send_email_to = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_cc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
     send_email_to_bcc = serializers.ListField(required = False,allow_null = True,allow_empty=True, child = serializers.EmailField())
@@ -370,9 +384,9 @@ class EditUploadSerializer(serializers.ModelSerializer):
             validation_errors['title'] = ['O campo "Título" é obrigatório.'] 
         if title is not None and len(str(title).strip()) > 0 and TemplateLogic.objects.filter(title = title, group = data_dict.get('group')).exclude(id = self.instance.id).exists():
             validation_errors['title'] = ['O Título tem de ser único.']
-        if send_type in ["EMAIL","DOCUMENT_EMAIL"] and (send_email_to == [] or send_email_to == None):
+        if 'EMAIL' in send_type and (send_email_to == [] or send_email_to == None):
             validation_errors['send_email_to'] = ['When send_type is EMAIL or DOCUMENT_EMAIL, the field send_email_to is required.']
-        if send_type in ["DOCUMENT","DOCUMENT_EMAIL"] and ('file' not in data_keys or ('file' in data_keys and (data_dict.get('file') == "" or data_dict.get('file') == None))):
+        if 'EMAIL' in send_type and ('file' not in data_keys or ('file' in data_keys and (data_dict.get('file') == "" or data_dict.get('file') == None))):
             validation_errors['file'] = ['When send_type is DOCUMENT or DOCUMENT_EMAIL, the field file is required.']
 
         if validation_errors:
