@@ -21,9 +21,21 @@ jobs:
 
         - name: get docker tag
           run: |
+            echo $# Get the latest tag
             IMAGE_TAGS=$(gcloud container images list-tags ${{ secrets.GCP_GCR }} --limit=1 --sort-by=~timestamp --format='get(tags)')
-            echo "IMAGE_TAGS=$IMAGE_TAGS" >> $GITHUB_ENV
-            echo $IMAGE_TAGS
+
+            # Parse the version number into an array
+            IFS='.' read -ra VERSION <<< "$IMAGE_TAGS"
+
+            # Increment the patch version number
+            ((VERSION[2]++))
+
+            # Combine the version number back into a string
+            NEW_TAG="${VERSION[0]}.${VERSION[1]}.${VERSION[2]}"
+
+            # Set the new tag as an environment variable
+            echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
+            echo $NEW_TAGIMAGE_TAGS
 
         # - name: docker build
         #   run: |
