@@ -19,10 +19,10 @@ jobs:
           run: |
             gcloud auth configure-docker
 
-        - name: pwd
+        - name: docker build
           run: |
-            pwd
-            ls -la
+            docker build . -t ${{ secrets.GCP_GCR }}
+          #  docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/gcp-gcr:${{ github.sha }}
   
         # - name: Build and push
         #   uses: docker/build-push-action@v5
