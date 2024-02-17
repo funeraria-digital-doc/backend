@@ -9,52 +9,21 @@ jobs:
 
         - name: Set up Docker Buildx
           uses: docker/setup-buildx-action@v3
-
-        - name: Login to GCR
-          uses: docker/login-action@v3
+  
+        - name: Set up gcloud CLI
+          uses: google-github-actions/setup-gcloud@v2
           with:
-            registry: gcr.io
-            username: ${{ secrets.GCR_USERNAME }}
-            password: ${{ secrets.GCR_PASSWORD }}
+            version: '>= 363.0.0'
+            project_id: ${{ secrets.GCP_PROJECT_ID }}
+            service_account_key: ${{ secrets.GCP_KEY }}
+            export_default_credentials: true
+  
+        - name: Login to GCR
+          run: echo "${{ secrets.GCP_KEY }}" | docker login -u _json_key --password-stdin https://gcr.io
+  
         - name: Build and push
           uses: docker/build-push-action@v5
           with:
             context: .
             push: true
-            tags: gcr.io/funeraria-388607/backend-funeraria:v1.0.0
-
-        # - name: Login to Docker Hub
-        #   uses: docker/login-action@v3
-        #   with:
-        #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-        #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-        # - name: Docker Build
-        #   run: |
-        #     docker build -t ${{ secrets.DOCKERHUB_IMAGE }} .
-            
-        # - name: Docker Tag
-        #   run: |
-        #     docker tag ${{ secrets.DOCKERHUB_IMAGE }}:latest ${{ secrets.GCP.GCR }}:latest
-
-        # - name: Docker Push
-        #   run: |
-        #     docker push ${{ secrets.GCP.GCR }}:latest
-    #   - name: Set up Python
-    #     uses: actions/setup-python@v2
-    #     with:
-    #       python-version: '3.x'
-    #   - name: Install dependencies
-    #     run: |
-    #       python -m pip install --upgrade pip
-    #       pip install -r requirements.txt
-    #   - name: Build and Deploy to gcp
-    #     run: |
-    #       gcloud builds submit --tag gcr.io/$PROJECT_ID/$IMAGE_NAME
-    #       gcloud run deploy $SERVICE_NAME --image gcr.io/$PROJECT_ID/$IMAGE_NAME --platform managed --region $REGION
-    #     env:
-    #       PROJECT_ID: ${{ secrets.PROJECT_ID }}
-    #       IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-    #       SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
-    #       REGION: ${{ secrets.REGION }}
-    #       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+            tags: ${{ secrets.GCP_GCR }}:v10.0.0
