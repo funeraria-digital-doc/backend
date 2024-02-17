@@ -19,13 +19,18 @@ jobs:
           run: |
             gcloud auth configure-docker
 
-        - name: docker build
+        - name: get docker tag
           run: |
-            docker build -t ${{ secrets.GCP_GCR }}:v1.1.1 .
+            echo "::set-env name=DOCKER_TAG::$(echo $GITHUB_SHA | cut -c1-7)"
+            echo $DOCKER_TAG
+
+        # - name: docker build
+        #   run: |
+        #     docker build -t ${{ secrets.GCP_GCR }}:v1.1.1 .
         
-        - name: docker push
-          run: |
-            docker push ${{ secrets.GCP_GCR }}:v1.1.1
+        # - name: docker push
+        #   run: |
+        #     docker push ${{ secrets.GCP_GCR }}:v1.1.1
   
         # - name: Build and push
         #   uses: docker/build-push-action@v5
