@@ -14,15 +14,15 @@ from pathlib import Path
 import os
 from decouple import config
 from djongo.operations import DatabaseOperations
+import logging
+logger = logging.getLogger(__name__)
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-
+#BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DJANGO_SETTINGS_MODULE='funeraria.settings'
 DatabaseOperations.conditional_expression_supported_in_where_clause = (
     lambda *args, **kwargs: False
 )
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
 
@@ -32,8 +32,18 @@ SECRET_KEY = '***REMOVED-DJANGO-SECRET-KEY***'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_WHITELIST = ['https://funeraria-fe.web.app', 'http://127.0.0.1']
+CORS_ALLOW_CREDENTIALS = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_HOST_USER = '118ee460309c78'
+EMAIL_HOST_PASSWORD = "***REMOVED-MAILTRAP-PASSWORD***"
+EMAIL_PORT = "2525"
+EMAIL_USE_TLS = True
 
 # Application definition
 
@@ -44,28 +54,36 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework_simplejwt',
-    'funeraria',
-    'user_app',
+    'rest_framework_swagger',
     'rest_framework',
+    'rest_framework_simplejwt',
     'rest_framework.authtoken',
-    'rest_auth',
-    'rest_auth.registration',
-    'django.contrib.sites',
-    'allauth',
-    'allauth.account',
-    'rest_framework_swagger'
+    'funeraria',
+    'groups',
+    'accounts',
+    'template_logic',
+    'records',
+    'stats',
+    'faker_service',
+    'record_templates',
+    'drf_yasg',
+    'corsheaders'
 ]
 SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_currentuser.middleware.ThreadLocalUserMiddleware',
+    
+    #'funeraria.middlewares.time_middleware.TimingMiddleware'
 ]
 
 ROOT_URLCONF = 'funeraria.urls'
@@ -91,20 +109,23 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'funeraria.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 DATABASES = {
     'default': {
         'ENGINE': 'djongo',
-        'NAME': config('DJANGO_DB_NAME'),
+        'NAME':  'funeraria',
         'ENFORCE_SCHEMA': True,
+        'CONN_MAX_AGE': 3600*24,
         'CLIENT': {
-            'host': config('MONGO_HOST'),
-            'port': 27017,
-            'username' : config('MONGO_USERNAME'),
-            'password' : config('MONGO_PASSWORD')
-        }  
+            # 'host': 'mongodb-dev',
+            # 'port' : 27017,
+            # 'password' : '***REMOVED-MONGO-PASSWORD***',
+            # 'username' : 'funerariadigitaldoc',
+            # 'authSource': 'admin',
+            # 'authMechanism' : 'SCRAM-SHA-1'
+            'host':  'mongodb+srv://funerariadigitaldoc:***REMOVED-MONGO-PASSWORD***@funerariamongo.jbar8li.mongodb.net/?retryWrites=true&w=majority'
+        }
     }
 }
 
@@ -131,9 +152,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/dev/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'pt-pt'
+LANGUAGES = [
+    ('pt-pt', 'Portuguese'),
+]
+TIME_ZONE = 'Europe/Lisbon'
 
 USE_I18N = True
 
@@ -146,43 +169,43 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+#STATICFILES_DIRS = [os.path.join('../', 'static')]
 # Default primary key field type
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-REST_USE_JWT = True
-AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-
-    # `allauth` specific authentication methods, such as login by e-mail
-    "allauth.account.auth_backends.AuthenticationBackend",
-    'user_app.authentication.EmailAuthBackend'
-]
+AUTH_USER_MODEL = 'accounts.User'
+REGISTRATION_EMAIL_CONFIRM = False
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema' ,
 
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
+    # 'DEFAULT_AUTHENTICATION_CLASSES': (
+    #     'accounts.authentication.BearerAuthentication',
+    # ),
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        #'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'funeraria.authentication.CachingTokenAuthentication'
+        #'rest_framework.authentication.TokenAuthentication',
     ],
+    
+        #'rest_framework.authentication.SessionAuthentication'
 
     # 'DEFAULT_THROTTLE_CLASSES': [
     #     'rest_framework.throttling.AnonRateThrottle',
     #     'rest_framework.throttling.UserRateThrottle'
     # ],
 
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '100/day',
-        'review-create': '2/day',
-        'review-list': '100/day',
-        'review-detail': '100/day',
-    },
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'anon': '100/day',
+    #     'user': '100/day',
+    #     'review-create': '2/day',
+    #     'review-list': '100/day',
+    #     'review-detail': '100/day',
+    # },
 
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     # 'PAGE_SIZE': 5,
@@ -190,4 +213,66 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
+    ],
 }
+
+SWAGGER_SETTINGS = {
+    'SHOW_REQUEST_HEADERS': True,
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'placeholder' : 'Token xxx'
+        }
+    },
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
+    ],
+}
+
+#STATIC_ROOT = '/static'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',  # Set the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    },
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'funeraria',
+        'TIMEOUT': 36400
+    }
+}   
+import datetime
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),  # Set your desired access token lifetime
+    'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),  # Set your desired refresh token lifetime
+    'SLIDING_TOKEN_LIFETIME': datetime.timedelta(days=30),  # Set your desired sliding token lifetime
+    'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=60),  # Set your desired sliding token refresh lifetime
+    'ROTATE_REFRESH_TOKENS': False,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer'),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+

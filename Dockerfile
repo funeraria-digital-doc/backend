@@ -1,0 +1,15 @@
+FROM python:3.11.2
+COPY ./requirements.txt /requirements.txt
+COPY ./funeraria /funeraria
+RUN apt-get update && apt-get install -y sudo
+WORKDIR /funeraria
+RUN sudo apt-get install -y libreoffice
+RUN python -m venv /py && \
+    /py/bin/pip install --no-cache-dir -r /requirements.txt && \
+    adduser --disabled-password --gecos "" django-user
+RUN usermod -aG sudo django-user
+RUN echo 'django-user:password' | chpasswd
+ENV PATH="/py/bin:$PATH"
+EXPOSE 8000
+USER django-user
+CMD python manage.py runserver 0.0.0.0:80

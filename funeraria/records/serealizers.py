@@ -1,0 +1,76 @@
+from rest_framework import serializers
+from records.models import Record
+from rest_framework.validators import UniqueValidator
+from rest_framework import serializers
+import logging
+logger = logging.getLogger(__name__)
+
+GENDER_CHOICES = (
+    ("WOMAN",'Feminino'),
+    ("MALE",'Masculino'),
+    ("OTHER",'Outro')
+)
+
+MARITAL_STATUS_CHOICES = (
+    ("SINGLE",'Solteiro/a'),
+    ("MARIED",'Casado/a'),
+    ("DIVORCED",'Divorciado/a'),
+    ("WIDOWER",'Viúvo/a')
+)
+
+STATUS_CHOICES = (
+    ("INACTIVE",'Inativo'),
+    ("ACTIVE",'Ativo'),
+    ("PENDING",'Pendente'),
+    ("COMPLETED",'Terminado'),
+    ("ARCHIVED",'Arquivado')
+)
+
+class RecordCreateSerializer(serializers.ModelSerializer):
+    
+    gender = serializers.ChoiceField(choices = GENDER_CHOICES)
+    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, allow_null = True)
+    marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES)
+    status = serializers.ChoiceField(choices = STATUS_CHOICES, required = False)
+    class Meta:
+        model = Record
+        fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'name': {
+                'validators': [
+                    UniqueValidator(
+                        queryset=Record.objects.all(),
+                        message= "Nome deve ser único"
+                    )
+                ]
+            }
+        }
+
+class RecordUpdateSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(required = False)
+    name = serializers.CharField(required = False)
+    gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False)
+    spouse_gender = serializers.ChoiceField(choices = GENDER_CHOICES, required = False, allow_null = True)
+    marital_status = serializers.ChoiceField(choices = MARITAL_STATUS_CHOICES, required = False)
+    status = serializers.ChoiceField(choices = STATUS_CHOICES, required = False)
+    class Meta:
+        model = Record
+        fields = '__all__'
+        read_only_fields = ['created_by', 'updated_by', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'name': {
+                'validators': [
+                    UniqueValidator(
+                        queryset=Record.objects.all(),
+                        message= "Nome deve ser único"
+                    )
+                ]
+            }
+        }
+       
+    
+    
+        
+        
+        

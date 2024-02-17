@@ -15,17 +15,30 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView
-)
 from rest_framework_swagger.views import get_swagger_view
-
-schema_view = get_swagger_view(title='Test API')
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from django.conf.urls import include
+#schema_view = get_swagger_view(title='Test API')
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Snippets API",
+      default_version='v1',
+      description="Test description"
+   ),
+   public=True,
+   permission_classes=[permissions.AllowAny]
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/account/', include('user_app.api.urls')),
-    path('swagger/', schema_view)
+    path('accounts/', include('accounts.urls')),
+    path('template-logic/', include('template_logic.urls')),
+    path('groups/', include('groups.urls')),
+    path('records/', include('records.urls')),
+    path('stats/', include('stats.urls')),
+    path('faker/', include('faker_service.urls')),
+    path('record-templates/', include('record_templates.urls')),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui')
 ]
