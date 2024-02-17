@@ -11,6 +11,12 @@ jobs:
           with:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
+        - name: Docker Tag
+          run: |
+            docker tag ${{ secrets.DOCKERHUB_IMAGE }} ${{ secrets.GCP.GCR}}
+        - name: Docker Push
+          run: |
+            docker push ${{ secrets.GCP.GCR}}
     #   - name: Set up Python
     #     uses: actions/setup-python@v2
     #     with:
