@@ -21,13 +21,11 @@ jobs:
 
         - name: docker build
           run: |
-            docker build -t ${{ secrets.GCP_GCR }} .
-        - name: docker tag
+            docker build -t ${{ secrets.GCP_GCR }}:v1.1.1 .
+        
+        - name: docker push
           run: |
-            docker tag backend-funeraria ${{ secrets.GCP_GCR }}
-        # - name: docker push
-        #   run: |
-        #     docker push ${{ secrets.GCP_GCR }}
+            docker push ${{ secrets.GCP_GCR }}:v1.1.1
   
         # - name: Build and push
         #   uses: docker/build-push-action@v5
