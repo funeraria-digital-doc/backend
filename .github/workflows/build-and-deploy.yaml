@@ -18,12 +18,16 @@ jobs:
         - name: Configure auth
           run: |
             gcloud auth configure-docker
+
+        - name: pwd
+          run: |
+            pwd
   
-        - name: Build and push
-          uses: docker/build-push-action@v5
-          with:
-            context: .
-            push: true
-            tags: ${{ secrets.GCP_GCR }}:v10.0.0 
-            cache-from: type=gha
-            cache-to: type=gha,mode=max 
+        # - name: Build and push
+        #   uses: docker/build-push-action@v5
+        #   with:
+        #     context: .
+        #     push: true
+        #     tags: ${{ secrets.GCP_GCR }}:v10.0.0 
+        #     cache-from: type=gha
+        #     cache-to: type=gha,mode=max 
