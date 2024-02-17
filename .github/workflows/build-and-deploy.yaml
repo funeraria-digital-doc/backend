@@ -21,8 +21,7 @@ jobs:
 
         - name: get docker tag
           run: |
-            echo "::set-env name=DOCKER_TAG::$(echo $GITHUB_SHA | cut -c1-7)"
-            echo $DOCKER_TAG
+            docker images --format '{{.Repository}}:{{.Tag}}' | grep YOUR_IMAGE_NAME | sort -r | head -n 1
 
         # - name: docker build
         #   run: |
