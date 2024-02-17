@@ -21,8 +21,9 @@ jobs:
 
         - name: docker build
           run: |
-            docker build . -t ${{ secrets.GCP_GCR }}
-          #  docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/gcp-gcr:${{ github.sha }}
+            docker build . -t ${{ secrets.GCP_GCR }} --name backend-funeraria
+            docker tag backend-funeraria ${{ secrets.GCP_GCR }}
+            docker push ${{ secrets.GCP_GCR }}
   
         # - name: Build and push
         #   uses: docker/build-push-action@v5
