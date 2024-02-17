@@ -19,11 +19,11 @@ jobs:
             
         - name: Docker Tag
           run: |
-            docker tag ${{ secrets.DOCKERHUB_IMAGE }} ${{ secrets.GCP.GCR}}
-            
+            docker tag ${{ secrets.DOCKERHUB_IMAGE }}:latest ${{ secrets.GCP.GCR }}:latest
+
         - name: Docker Push
           run: |
-            docker push ${{ secrets.GCP.GCR}}
+            docker push ${{ secrets.GCP.GCR }}:latest
     #   - name: Set up Python
     #     uses: actions/setup-python@v2
     #     with:
