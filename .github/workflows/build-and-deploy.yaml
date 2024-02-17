@@ -36,18 +36,14 @@ jobs:
         - name: docker-compose build
           run: |
             docker-compose build
-        - name: List available images
-          run: |
-            IMAGES=$(docker images)
-            echo $IMAGES
         # - name: docker build 
         #   run: |
         #     docker build -t ${{ secrets.GCP_GCR }}:$NEW_TAG .
-        - name: docker push
+        - name: Docker tag
           run: |
-            docker tag backend-funeraria ${{ secrets.GCP_GCR }}:$NEW_TAG
+            docker tag backend_funeraria ${{ secrets.GCP_GCR }}:$NEW_TAG
 
-        - name: docker push
+        - name: Docker push
           run: |
             docker push ${{ secrets.GCP_GCR }}:$NEW_TAG
             
