@@ -1,4 +1,5 @@
 import io
+#import tempfile
 from record_templates.serializers import RecordTemplateSerializer
 
 from template_logic.helpers.helper import  convertFileToImage, editDocument, get_doc_variables, getDbKeysToDoc, hasDuplicates
@@ -20,6 +21,7 @@ from docxtpl import DocxTemplate
 import base64
 import logging
 import zipfile
+#from pdfrw import PdfReader, PdfWriter, PdfDict
 logger = logging.getLogger(__name__)
 
 @swagger_auto_schema(
@@ -79,6 +81,39 @@ def get_variables(request, *args, **kwargs):
         return Response({"error" : "Template does not exist!"}, status = status.HTTP_404_NOT_FOUND)
     variables = get_doc_variables(template, False, True)
     return Response(variables, status = status.HTTP_200_OK)
+    
+# def editPdf(file):
+#     import pypdftk
+#     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp:
+#         temp.write(file.read())
+#         temp_filename = temp.name
+
+#     # Extract form fields
+#     result = pypdftk.dump_data_fields(temp_filename)
+#     logger.info(result)
+
+#     data_fields = {'topmostSubform[0].Page1[0].RadioButtonList[0]' : '1', 'topmostSubform[0].Page1[0].Nome_completo[0]' : 'cenas'}
+
+#     # Fill form and write directly to 'output.pdf'
+#     result2 = pypdftk.fill_form(temp_filename, data_fields, 'out.pdf')
+#     logger.info(result2)
+#     return True
+
+# def editPdf2(file):
+#     from pdfrw import PdfReader, PdfWriter, PdfDict
+#     # Read the PDF
+#     input_pdf = PdfReader('Subsideo_de_Funeral.pdf')
+
+#     # Fill the form
+#     for page in input_pdf.pages:
+#         for field in page.Annots:
+#             logger.i
+#             if field.T == 'topmostSubform[0].Page1[0].Nome_completo[0]':
+#                 field.update(PdfDict(V='John Doe', Ff=1))
+
+#     # Write the PDF
+#     output_pdf = PdfWriter()
+#     output_pdf.write('output.pdf', input_pdf)
 
 @swagger_auto_schema(
     method='post',
