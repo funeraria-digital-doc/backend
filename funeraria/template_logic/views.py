@@ -249,15 +249,15 @@ def download(request, *args, **kwargs):
                 else:
                     editDocRes = editDocument(template, changeVariablesObject)  
                     document = editDocRes.get('doc')
-                    #doc = document
                     buffer = io.BytesIO()
                     document.save(buffer)
                     buffer.seek(0)
                     if 'IMAGE' in request.data.get('data').get('to_send_option'):
                         convertFileToImage(buffer, doc_response)
                     
-                    base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                    doc_response['file'] = base64_data
+                    if 'DOCUMENT' in request.data.get('data').get('to_send_option'):
+                        base64_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                        doc_response['file'] = base64_data
                     data = {
                         'template' : template.get('id'),
                         'record' : record.get('id'),

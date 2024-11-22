@@ -263,14 +263,13 @@ def getLabel(val, labels):
     return labels[val] if val in labels else ''
 
 def convertFileToImage(buffer, doc_response):
-    logger.info('doc_response')
     temp_docx = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
     temp_docx.write(buffer.read())
     try:
         pdf = convert_to_pdf(temp_docx)
-        doc_response['pdf'] = base64.b64encode(pdf.getvalue()).decode('utf-8')
-        images = pdf_to_png(pdf)
-        doc_response['images'] = images
+        # se quiser guardar o pdf
+        #doc_response['pdf'] = base64.b64encode(pdf.getvalue()).decode('utf-8')
+        doc_response['images'] = pdf_to_png(pdf)
     except Exception as e:
         logger.info("Failed to convert to pdf - %s", e)
     os.remove(temp_docx.name)
@@ -302,10 +301,10 @@ def convert_to_pdf(docx_bytesIO):
 
 def pdf_to_png(pdf_stream):
     pdf_reader = fitz.open(stream=pdf_stream.read(), filetype="pdf")
-    logger.info(pdf_reader)
+    #logger.info(pdf_reader)
     png_images = []
-    logger.info("páginas")
-    logger.info(len(pdf_reader))
+    #logger.info("páginas")
+    #logger.info(len(pdf_reader))
     for page_num in range(len(pdf_reader)):
         pdf_page = pdf_reader[page_num]
         # Define the zoom factor
