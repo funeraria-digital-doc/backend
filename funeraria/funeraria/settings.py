@@ -15,7 +15,7 @@ import os
 from decouple import config
 from djongo.operations import DatabaseOperations
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)# settings.py
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 #BASE_DIR = Path(__file__).resolve().parent.parent
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

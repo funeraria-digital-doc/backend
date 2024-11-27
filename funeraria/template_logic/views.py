@@ -129,7 +129,7 @@ def get_variables_from_file(request, *args, **kwargs):
         file_variables = []
         for file in archive.filelist:
             # Check if the file is in the 'word/media' directory
-            if file.filename.startswith('word/media/'):
+            if file.filename.startswith('word/media/') and file.filename.endswith(('.jpeg', '.jpg', '.png')):
                 image_name_with_extension = file.filename.replace('word/media/', '')
                 image_name = image_name_with_extension.split('.')[0]
                 img_data = archive.read(file)
