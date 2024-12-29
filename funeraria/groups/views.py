@@ -1,4 +1,5 @@
 import logging
+from records.models import Record
 from funeraria.permissions import IsSuperUser
 from rest_framework.response import Response
 from rest_framework import status
@@ -69,8 +70,18 @@ def get_group_by_slug(request, group_slug):
     group = Group.objects.filter(slug=group_slug).first()
     if group is None:
         return Response({"error" : "Group does not exist!"}, status = status.HTTP_404_NOT_FOUND)
-    logger.info(group.page)
-    return Response(group.page if group.page else None, status = status.HTTP_200_OK) 
+    page = group.page
+    page['deaths'] = []
+    group_records = Record.objects.filter(group=group.id).values('death_date', 'name', 'photo', 'municipality')[:10]
+    page['deaths'] = [
+        {
+            'image': record['photo'] if record['photo'] else None,
+            'name': record['name'] if record['name'] else None,
+            'date': record['municipality'] + ' ' + record['death_date'].strftime('%d/%m/%Y')
+        }
+        for record in group_records
+    ]
+    return Response(page if page else None, status = status.HTTP_200_OK) 
 
 @swagger_auto_schema(
     method='post',
