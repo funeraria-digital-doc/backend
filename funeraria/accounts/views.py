@@ -26,17 +26,17 @@ logger = logging.getLogger(__name__)
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties= {
-            'username': openapi.Schema(title="username",type=openapi.TYPE_STRING),
+            'email': openapi.Schema(title="email",type=openapi.TYPE_STRING),
             'password': openapi.Schema(title="password",type=openapi.TYPE_STRING),
         },
     ),
 )
 @api_view(['POST'])
 def login(request):
-    username = request.data['username']
+    email = request.data['email']
     password = request.data['password']
-    if username and password:
-        user = authenticate(username=username, password=password)
+    if email and password:
+        user = authenticate(email=email, password=password)
         if not user:
             return Response('Acesso negado. Nome ou palavra-passe erradas.',status=status.HTTP_401_UNAUTHORIZED)
         else:

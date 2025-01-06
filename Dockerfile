@@ -15,5 +15,5 @@ RUN echo 'django-user:password' | chpasswd
 ENV PATH="/py/bin:$PATH"
 EXPOSE 8000
 USER django-user
-CMD python manage.py runserver 0.0.0.0:80
+CMD python manage.py runserver 0.0.0.0:8000
 # --no-cache-dir

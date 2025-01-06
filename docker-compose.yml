@@ -1,6 +1,7 @@
 version: '3.1'
 services:
   funeraria:
+    container_name: funeraria_backend
     build: 
       context: .
     ports:
@@ -9,8 +10,11 @@ services:
       - ./funeraria:/funeraria
       - ./static:/static
     command: python manage.py runserver 0.0.0.0:8000
-#     networks:
-#       - django-mongo
-# networks:
-#   django-mongo:
-#     external: true
+    networks:
+      - funeraria_backend_frontend
+      - funeraria_backend_db
+networks:
+  funeraria_backend_frontend:
+    driver: bridge
+  funeraria_backend_db:
+    driver: bridge

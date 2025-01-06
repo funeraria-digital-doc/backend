@@ -32,7 +32,14 @@ SECRET_KEY = '***REMOVED-DJANGO-SECRET-KEY***'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    '127.0.0.1', 
+    'localhost', 
+    '192.168.0.0/16',  # Private IP range
+    '10.0.0.0/8',      # Private IP range
+    '172.16.0.0/12',    # Private IP range
+    '192.168.1.26'
+]
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = ['https://funeraria-fe.web.app', 'http://127.0.0.1']
 CORS_ALLOW_CREDENTIALS = True
@@ -124,7 +131,8 @@ DATABASES = {
             # 'username' : 'funerariadigitaldoc',
             # 'authSource': 'admin',
             # 'authMechanism' : 'SCRAM-SHA-1'
-            'host':  'mongodb+srv://funerariadigitaldoc:***REMOVED-MONGO-PASSWORD***@funerariamongo.jbar8li.mongodb.net/?retryWrites=true&w=majority'
+            #'host':  'mongodb+srv://funerariadigitaldoc:***REMOVED-MONGO-PASSWORD***@funerariamongo.jbar8li.mongodb.net/?retryWrites=true&w=majority'
+            'host': 'mongodb://funeraria:***REMOVED-MONGO-PASSWORD***@192.168.1.26:27017/admin?retryWrites=true&loadBalanced=false&connectTimeoutMS=10000&authSource=admin&authMechanism=SCRAM-SHA-1',
         }
     }
 }
@@ -252,6 +260,12 @@ LOGGING = {
         'level': 'INFO',  # Set the desired log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     },
 }
+
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'accounts.authentication.EmailBackend',
+]
 
 CACHES = {
     'default': {
