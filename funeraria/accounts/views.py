@@ -38,7 +38,7 @@ def login(request):
     if email and password:
         user = authenticate(email=email, password=password)
         if not user:
-            return Response('Acesso negado. Nome ou palavra-passe erradas.',status=status.HTTP_401_UNAUTHORIZED)
+            return Response('Acesso negado. Email ou palavra-passe erradas.',status=status.HTTP_401_UNAUTHORIZED)
         else:
             refresh = RefreshToken.for_user(user)
             refresh['name']= user.username
@@ -50,7 +50,7 @@ def login(request):
                 'access': str(refresh.access_token)
             },status=status.HTTP_200_OK)
     else:
-        return Response('Nome ou palavra-passe são obrigatórios.',status=status.HTTP_200_OK)
+        return Response('Email ou palavra-passe são obrigatórios.',status=status.HTTP_200_OK)
     
 @swagger_auto_schema(       
     method='post',
