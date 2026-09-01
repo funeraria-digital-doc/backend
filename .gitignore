@@ -3,3 +3,12 @@ web-variables.env
 bd_fields.txt
 notas.txt
 .env
+
+# Secrets / credentials - never commit
+*.pem
+*.p12
+*serviceaccount*.json
+*service-account*.json
+*credentials*.json
+*-firebase-adminsdk-*.json
+funeraria-*-*.json
