@@ -3,6 +3,8 @@ web-variables.env
 bd_fields.txt
 notas.txt
 .env
+*.pdf
+db.sqlite3
 
 # Secrets / credentials - never commit
 *.pem
